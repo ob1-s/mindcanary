@@ -1,0 +1,27 @@
+[package]
+name = "mindcanary-client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+mindcanary-protocol.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+chrono.workspace = true
+mindcanary-storage.workspace = true
+mindcanary-test-support.workspace = true
+mindcanaryd = { path = "../../bins/daemon" }
+tempfile.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

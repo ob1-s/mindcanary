@@ -1,0 +1,31 @@
+{
+  "name": "@mindcanary/extension",
+  "version": "0.1.2",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build --mode development",
+    "build:release": "tsc --noEmit && vite build --mode release",
+    "build:firefox": "tsc --noEmit && vite build --mode firefox-development",
+    "build:firefox:release": "tsc --noEmit && vite build --mode firefox-release",
+    "format": "prettier --write src popup.html manifest.base.json extension-identity.ts extension-identity.test.ts firefox-identity.ts firefox-identity.test.ts vite.config.ts",
+    "format:check": "prettier --check src popup.html manifest.base.json extension-identity.ts extension-identity.test.ts firefox-identity.ts firefox-identity.test.ts vite.config.ts",
+    "lint": "eslint src extension-identity.ts extension-identity.test.ts firefox-identity.ts firefox-identity.test.ts vite.config.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mindcanary/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "@types/chrome": "^0.0.326",
+    "@types/node": "^22.15.30",
+    "eslint": "^9.28.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.0",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.3"
+  }
+}

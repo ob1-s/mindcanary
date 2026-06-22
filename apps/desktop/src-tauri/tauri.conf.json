@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MindCanary",
+  "version": "0.1.2",
+  "identifier": "app.mindcanary.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "bash ../../scripts/prepare-desktop-bundle.sh && pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "MindCanary",
+        "width": 1180,
+        "height": 820,
+        "minWidth": 860,
+        "minHeight": 640,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data:; style-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb"],
+    "icon": ["icons/icon.png"],
+    "shortDescription": "MindCanary local-first personal rhythms dashboard",
+    "longDescription": "A private journal for understanding how chosen routines change over time without exposing raw browsing data.",
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/lib/mindcanary/mindcanaryd": "binaries/mindcanaryd",
+          "/usr/lib/mindcanary/mindcanary-native-host": "binaries/mindcanary-native-host"
+        }
+      }
+    }
+  }
+}

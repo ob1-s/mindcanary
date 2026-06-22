@@ -1,0 +1,33 @@
+{
+  "name": "mindcanary",
+  "version": "0.1.2",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "packageManager": "pnpm@10.8.1",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "backup:local": "bash scripts/backup-local-records.sh",
+    "check": "bash scripts/check.sh",
+    "dev:profile": "bash scripts/with-dev-profile.sh",
+    "fixtures:check": "bash scripts/check-fixtures.sh",
+    "fixtures:generate": "cargo run -q -p mindcanary-test-support --bin generate-fixtures -- fixtures",
+    "format": "pnpm -r --if-present format",
+    "format:check": "pnpm -r --if-present format:check",
+    "launch:preflight": "bash scripts/launch-preflight.sh",
+    "lint": "pnpm -r --if-present lint",
+    "removal:audit": "bash scripts/audit-local-removal-disposable.sh",
+    "package:check": "bash scripts/check-linux-package.sh",
+    "package:linux": "pnpm --filter @mindcanary/desktop tauri build --bundles deb",
+    "protocol:generate": "cargo run -q -p mindcanary-protocol --bin export-typescript -- packages/protocol-ts/src/generated.ts",
+    "protocol:check": "bash scripts/check-protocol.sh",
+    "reliability:local": "bash scripts/reliability-local.sh",
+    "release:alpha": "bash scripts/prepare-linux-alpha-release.sh",
+    "release:snapshot": "bash scripts/release-snapshot.sh",
+    "smoke:chrome": "bash scripts/smoke-stable-chrome-connection.sh",
+    "test": "pnpm -r --if-present test",
+    "uninstall:local": "bash scripts/uninstall-local.sh"
+  }
+}

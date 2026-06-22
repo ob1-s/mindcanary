@@ -1,0 +1,19 @@
+[package]
+name = "mindcanary-analytics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+chrono.workspace = true
+mindcanary-storage.workspace = true
+
+[dev-dependencies]
+mindcanary-protocol.workspace = true
+mindcanary-test-support.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

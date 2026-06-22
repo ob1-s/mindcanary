@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "MindCanary",
+  "version": "0.1.2",
+  "description": "Local-first personal rhythm collection without browsing content.",
+  "minimum_chrome_version": "120",
+  "permissions": ["alarms", "nativeMessaging", "storage"],
+  "optional_permissions": ["idle", "scripting"],
+  "optional_host_permissions": ["https://x.com/*", "https://twitter.com/*"],
+  "action": {
+    "default_title": "MindCanary status",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  }
+}

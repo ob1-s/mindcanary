@@ -1,0 +1,32 @@
+[package]
+name = "mindcanary-desktop"
+version = "0.1.2"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+publish = false
+rust-version = "1.86"
+authors = ["MindCanary contributors"]
+description = "A private journal for understanding how chosen routines change over time"
+
+[lib]
+name = "mindcanary_desktop"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+anyhow = "1.0.98"
+mindcanary-client = { path = "../../../crates/client" }
+mindcanary-protocol = { path = "../../../crates/protocol" }
+serde = { version = "1.0.219", features = ["derive"] }
+tauri = { version = "2", features = [] }
+uuid = "1.16.0"
+
+[dev-dependencies]
+tempfile = "3.20.0"
+
+[workspace]
+
+[lints.rust]
+unsafe_code = "forbid"

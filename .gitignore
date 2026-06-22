@@ -1,0 +1,25 @@
+**/target/
+**/node_modules/
+apps/desktop/src-tauri/binaries/
+/.pnpm-store/
+**/dist/
+**/dist-*/
+**/coverage/
+/.DS_Store
+*.log
+
+# Local runtime and sensitive state
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sock
+/.mindcanary/
+
+# Editor state
+/.idea/
+/.vscode/
+*~
+
+desktop-ui.md

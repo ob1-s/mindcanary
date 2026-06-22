@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindCanary Status</title>
+    <script type="module" src="/src/popup.ts"></script>
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header>
+        <p class="eyebrow">MindCanary</p>
+        <h1 id="headline">Checking collector...</h1>
+        <p id="detail">Reading local extension status.</p>
+      </header>
+
+      <section class="next-action-card" aria-labelledby="next-action-title">
+        <h2 id="next-action-title">Next step</h2>
+        <p id="next-action">Checking local setup.</p>
+      </section>
+
+      <dl class="status-grid">
+        <div>
+          <dt>Extension ID</dt>
+          <dd id="extension-id">-</dd>
+        </div>
+        <div>
+          <dt>Native host</dt>
+          <dd id="native-host">-</dd>
+        </div>
+        <div>
+          <dt>Signals</dt>
+          <dd id="signals">-</dd>
+        </div>
+        <div>
+          <dt>Queue</dt>
+          <dd id="queue">-</dd>
+        </div>
+        <div>
+          <dt>Bucket</dt>
+          <dd id="bucket">-</dd>
+        </div>
+        <div>
+          <dt>Bucket progress</dt>
+          <dd id="bucket-progress-text">-</dd>
+          <progress
+            id="bucket-progress"
+            max="100"
+            value="0"
+            aria-label="Current aggregate bucket progress"
+            hidden
+          ></progress>
+        </div>
+        <div>
+          <dt>Settings</dt>
+          <dd id="settings">-</dd>
+        </div>
+        <div>
+          <dt>Delivery</dt>
+          <dd id="delivery">-</dd>
+        </div>
+        <div>
+          <dt>Idle permission</dt>
+          <dd id="idle-permission">-</dd>
+        </div>
+        <div>
+          <dt>Feed adapter</dt>
+          <dd id="scroll-permission">-</dd>
+        </div>
+      </dl>
+
+      <section id="setup" class="setup-card" hidden>
+        <h2>Native-host setup</h2>
+        <p>
+          Run this from the repository root, then reload the unpacked extension.
+        </p>
+        <pre><code id="setup-command"></code></pre>
+      </section>
+
+      <button id="request-idle" type="button" hidden>
+        Allow idle permission
+      </button>
+      <button id="request-scrolling" type="button" hidden>
+        Allow selected feed sites
+      </button>
+      <section
+        id="queue-reset-card"
+        class="queue-reset-card"
+        aria-labelledby="queue-reset-title"
+        hidden
+      >
+        <h2 id="queue-reset-title">Extension queue</h2>
+        <p id="reset-queue-copy" hidden></p>
+        <button id="reset-queue" type="button" hidden>
+          Clear extension queue
+        </button>
+      </section>
+      <button id="refresh" type="button">Refresh status</button>
+
+      <p class="privacy-note">
+        This popup shows operational state only. It does not display URLs,
+        titles, page text, search terms, or browsing history.
+      </p>
+    </main>
+  </body>
+</html>

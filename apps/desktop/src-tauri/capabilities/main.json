@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Permissions for the single local MindCanary window.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

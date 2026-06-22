@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "development": {
+    "extension_id": "agokdhalkipifklmbipkgmfakdcaekbj",
+    "manifest_key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsFFPLsibzh3t30iab0VYoQmvQipJ9uyTT5tedDLoNt0Z6FP7iEFiLqZ6oItYMUn/PNVyrA8+OujDZcbemGqxYg+NeMLZqDCLIqL/LuTH8ixk59YlDw1k2Skzl7Cu7LovgNsc+SC1iSduPDlYkO210suTxcECYOQlKiytAqyw09Kfxj23+fHTQ5hn8cl3ttIZbXgKQSpl3xBkYL0L2K7Qd3mSUVVrMkMaMjPFMSqw7F8XHVfj+X/xMjBiSQhNK+/bxHS8Uj62Vy7lDLFPNMBPPx1PWCxrMbJ6bEenHoGB/tRXcYC/Rt63ODNrH2rZXKEBKNM+g7WT8r/T3MmKdf5ZUwIDAQAB"
+  },
+  "release": {
+    "extension_id": null,
+    "manifest_key": null
+  }
+}
