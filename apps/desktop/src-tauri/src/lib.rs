@@ -5,6 +5,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             commands::app_version,
+            commands::runtime_diagnostics,
             commands::ensure_local_service,
             commands::local_service_autostart_status,
             commands::set_local_service_autostart,
@@ -21,6 +22,8 @@ pub fn run() {
             commands::prepare_delete_signal_records,
             commands::delete_signal_records,
             commands::submit_check_in,
+            commands::prepare_delete_latest_check_in,
+            commands::delete_latest_check_in,
             commands::save_annotation,
             commands::prepare_delete_annotation,
             commands::delete_annotation,

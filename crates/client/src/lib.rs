@@ -103,6 +103,30 @@ impl DaemonClient {
         .await
     }
 
+    pub async fn prepare_delete_latest_check_in(
+        &self,
+        local_date: String,
+    ) -> Result<ProtocolResponse, ClientError> {
+        self.send(&ProtocolRequest::PrepareDeleteLatestCheckIn {
+            protocol_version: PROTOCOL_VERSION,
+            local_date,
+        })
+        .await
+    }
+
+    pub async fn delete_latest_check_in(
+        &self,
+        local_date: String,
+        confirmation_token: uuid::Uuid,
+    ) -> Result<ProtocolResponse, ClientError> {
+        self.send(&ProtocolRequest::DeleteLatestCheckIn {
+            protocol_version: PROTOCOL_VERSION,
+            local_date,
+            confirmation_token,
+        })
+        .await
+    }
+
     pub async fn save_annotation(
         &self,
         annotation: AnnotationRecord,

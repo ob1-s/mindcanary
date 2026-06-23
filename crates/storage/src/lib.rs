@@ -427,6 +427,37 @@ impl EncryptedStore {
         Ok(IngestDisposition::Stored)
     }
 
+    pub fn latest_check_in_id_for_local_date(
+        &self,
+        local_date: &str,
+    ) -> Result<Option<Uuid>, StorageError> {
+        self.connection
+            .query_row(
+                "SELECT check_in_id
+                 FROM check_ins
+                 WHERE local_date = ?1
+                 ORDER BY occurred_at_ms DESC, created_at_ms DESC
+                 LIMIT 1",
+                [local_date],
+                |row| row.get::<_, Vec<u8>>(0),
+            )
+            .optional()
+            .map_err(StorageError::Database)?
+            .map(|bytes| uuid_from_blob(&bytes))
+            .transpose()
+    }
+
+    pub fn delete_check_in(&mut self, check_in_id: Uuid) -> Result<bool, StorageError> {
+        let deleted = self
+            .connection
+            .execute(
+                "DELETE FROM check_ins WHERE check_in_id = ?1",
+                [check_in_id.as_bytes().as_slice()],
+            )
+            .map_err(StorageError::Database)?;
+        Ok(deleted > 0)
+    }
+
     pub fn save_annotation(&mut self, annotation: &AnnotationRecord) -> Result<(), StorageError> {
         let transaction = self
             .connection
@@ -2376,6 +2407,38 @@ mod tests {
                 context_tags: vec![ContextTag::Deadline, ContextTag::NewsCycle],
             }]
         );
+    }
+
+    #[test]
+    fn deletes_latest_check_in_for_a_day_without_clearing_earlier_entries() {
+        let temp = TempDir::new().unwrap();
+        let provider = MemoryKeyProvider::default();
+        let mut store = EncryptedStore::bootstrap(database_path(&temp), &provider).unwrap();
+        let first_id = Uuid::now_v7();
+        let second_id = Uuid::now_v7();
+        let mut first = check_in(first_id);
+        first.occurred_at = Utc.with_ymd_and_hms(2026, 6, 14, 12, 0, 0).unwrap();
+        let mut second = check_in(second_id);
+        second.occurred_at = Utc.with_ymd_and_hms(2026, 6, 14, 18, 0, 0).unwrap();
+
+        store.submit_check_in(&first).unwrap();
+        store.submit_check_in(&second).unwrap();
+
+        assert_eq!(
+            store
+                .latest_check_in_id_for_local_date("2026-06-14")
+                .unwrap(),
+            Some(second_id)
+        );
+        assert!(store.delete_check_in(second_id).unwrap());
+        assert_eq!(store.check_in_count().unwrap(), 1);
+        assert_eq!(
+            store
+                .latest_check_in_id_for_local_date("2026-06-14")
+                .unwrap(),
+            Some(first_id)
+        );
+        assert!(!store.delete_check_in(second_id).unwrap());
     }
 
     #[test]

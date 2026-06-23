@@ -1,9 +1,30 @@
 use mindcanary_client::{ClientError, DaemonClient};
 use mindcanary_protocol::{AnnotationRecord, CheckInRecord, ProtocolResponse, SignalId};
+use serde::Serialize;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct RuntimeDiagnostics {
+    pub runtime: &'static str,
+    pub profile: Option<String>,
+    pub socket_path: String,
+}
 
 #[tauri::command]
 pub fn app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
+}
+
+#[tauri::command]
+pub fn runtime_diagnostics() -> RuntimeDiagnostics {
+    RuntimeDiagnostics {
+        runtime: if cfg!(debug_assertions) {
+            "development"
+        } else {
+            "packaged"
+        },
+        profile: std::env::var("MINDCANARY_PROFILE").ok(),
+        socket_path: client().socket_path().display().to_string(),
+    }
 }
 
 #[tauri::command]
@@ -137,6 +158,27 @@ pub async fn delete_signal_records(
 pub async fn submit_check_in(check_in: CheckInRecord) -> Result<ProtocolResponse, String> {
     client()
         .submit_check_in(check_in)
+        .await
+        .map_err(local_service_error)
+}
+
+#[tauri::command]
+pub async fn prepare_delete_latest_check_in(local_date: String) -> Result<ProtocolResponse, String> {
+    client()
+        .prepare_delete_latest_check_in(local_date)
+        .await
+        .map_err(local_service_error)
+}
+
+#[tauri::command]
+pub async fn delete_latest_check_in(
+    local_date: String,
+    confirmation_token: String,
+) -> Result<ProtocolResponse, String> {
+    let confirmation_token = uuid::Uuid::parse_str(&confirmation_token)
+        .map_err(|_| "invalid_confirmation_token".to_owned())?;
+    client()
+        .delete_latest_check_in(local_date, confirmation_token)
         .await
         .map_err(local_service_error)
 }

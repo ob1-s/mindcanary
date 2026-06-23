@@ -35,7 +35,8 @@ describe("connection status model", () => {
     expect(browser).toMatchObject({
       label: "Chrome extension",
       statusLabel: "Connected",
-      detail: "Last data received 2 minutes ago.",
+      detail:
+        "Last data received 2 minutes ago. New local buckets usually arrive every 15 minutes while the source is active.",
       tone: "positive",
     });
   });
@@ -164,7 +165,7 @@ describe("connection status model", () => {
     expect(model.items[0]).toMatchObject({
       statusLabel: "No recent browser data",
       detail:
-        "Last browser aggregate arrived 1 hour ago. Chrome may be closed, disabled, or waiting for the next 15-minute bucket.",
+        "Last browser aggregate arrived 1 hour ago. Chrome may be closed, disabled, or waiting for its next 15-minute bucket.",
       tone: "attention",
     });
   });

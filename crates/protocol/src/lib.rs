@@ -40,6 +40,15 @@ pub enum ProtocolRequest {
         protocol_version: u16,
         check_in: CheckInRecord,
     },
+    PrepareDeleteLatestCheckIn {
+        protocol_version: u16,
+        local_date: String,
+    },
+    DeleteLatestCheckIn {
+        protocol_version: u16,
+        local_date: String,
+        confirmation_token: Uuid,
+    },
     SaveAnnotation {
         protocol_version: u16,
         annotation: AnnotationRecord,
@@ -130,6 +139,12 @@ impl ProtocolRequest {
             | Self::SubmitCheckIn {
                 protocol_version, ..
             }
+            | Self::PrepareDeleteLatestCheckIn {
+                protocol_version, ..
+            }
+            | Self::DeleteLatestCheckIn {
+                protocol_version, ..
+            }
             | Self::SaveAnnotation {
                 protocol_version, ..
             }
@@ -196,6 +211,8 @@ impl ProtocolRequest {
         match self {
             Self::IngestAggregate { batch, .. } => batch.validate_at(now)?,
             Self::SubmitCheckIn { check_in, .. } => check_in.validate_at(now)?,
+            Self::PrepareDeleteLatestCheckIn { local_date, .. }
+            | Self::DeleteLatestCheckIn { local_date, .. } => validate_local_date(local_date)?,
             Self::SaveAnnotation { annotation, .. } => annotation.validate_at(now)?,
             Self::GetDailyRhythmInsights { limit, .. } => validate_insight_limit(*limit)?,
             Self::GetDailyTimeline { limit, .. } => validate_timeline_limit(*limit)?,
@@ -234,6 +251,12 @@ impl ProtocolRequest {
 
         Ok(())
     }
+}
+
+fn validate_local_date(value: &str) -> Result<(), ValidationError> {
+    NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map(|_| ())
+        .map_err(|_| ValidationError::InvalidLocalDate)
 }
 
 fn validate_backup_path(value: &str) -> Result<(), ValidationError> {
@@ -300,6 +323,18 @@ pub enum ProtocolResponse {
         protocol_version: u16,
         check_in_id: Uuid,
         disposition: IngestDisposition,
+    },
+    DeleteLatestCheckInConfirmation {
+        protocol_version: u16,
+        confirmation_token: Uuid,
+        expires_at: DateTime<Utc>,
+        local_date: String,
+        check_in_id: Uuid,
+    },
+    CheckInDeleted {
+        protocol_version: u16,
+        local_date: String,
+        check_in_id: Uuid,
     },
     AnnotationSaved {
         protocol_version: u16,
@@ -1506,6 +1541,17 @@ const TYPESCRIPT_PROTOCOL_TYPES: &str = r#"export type ProtocolRequest =
       check_in: CheckInRecord;
     }
   | {
+      type: "prepare_delete_latest_check_in";
+      protocol_version: typeof PROTOCOL_VERSION;
+      local_date: string;
+    }
+  | {
+      type: "delete_latest_check_in";
+      protocol_version: typeof PROTOCOL_VERSION;
+      local_date: string;
+      confirmation_token: string;
+    }
+  | {
       type: "save_annotation";
       protocol_version: typeof PROTOCOL_VERSION;
       annotation: AnnotationRecord;
@@ -1655,6 +1701,20 @@ export type ProtocolResponse =
       protocol_version: typeof PROTOCOL_VERSION;
       check_in_id: string;
       disposition: IngestDisposition;
+    }
+  | {
+      type: "delete_latest_check_in_confirmation";
+      protocol_version: typeof PROTOCOL_VERSION;
+      confirmation_token: string;
+      expires_at: string;
+      local_date: string;
+      check_in_id: string;
+    }
+  | {
+      type: "check_in_deleted";
+      protocol_version: typeof PROTOCOL_VERSION;
+      local_date: string;
+      check_in_id: string;
     }
   | {
       type: "annotation_saved";

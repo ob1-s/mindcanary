@@ -24,6 +24,12 @@ export interface ChromeConnectorStatus {
   setup_command: string | null;
 }
 
+export interface RuntimeDiagnostics {
+  runtime: "development" | "packaged";
+  profile: string | null;
+  socket_path: string;
+}
+
 export interface LocalServiceAutostartStatus {
   supported: boolean;
   enabled: boolean;
@@ -32,6 +38,7 @@ export interface LocalServiceAutostartStatus {
 
 export const daemonApi = {
   appVersion: () => invoke<string>("app_version"),
+  runtimeDiagnostics: () => invoke<RuntimeDiagnostics>("runtime_diagnostics"),
   ensureLocalService: () => invoke<void>("ensure_local_service"),
   localServiceAutostartStatus: () =>
     invoke<LocalServiceAutostartStatus>("local_service_autostart_status"),
@@ -65,6 +72,13 @@ export const daemonApi = {
     }),
   submitCheckIn: (checkIn: CheckInRecord) =>
     invoke<ProtocolResponse>("submit_check_in", { checkIn }),
+  prepareDeleteLatestCheckIn: (localDate: string) =>
+    invoke<ProtocolResponse>("prepare_delete_latest_check_in", { localDate }),
+  deleteLatestCheckIn: (localDate: string, confirmationToken: string) =>
+    invoke<ProtocolResponse>("delete_latest_check_in", {
+      localDate,
+      confirmationToken,
+    }),
   saveAnnotation: (annotation: AnnotationRecord) =>
     invoke<ProtocolResponse>("save_annotation", { annotation }),
   prepareDeleteAnnotation: (annotationId: string) =>

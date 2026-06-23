@@ -167,6 +167,14 @@ button {
   white-space: nowrap;
 }
 
+.profile-pill {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
 .status-dot,
 .loading-dot {
   width: 7px;
@@ -888,6 +896,18 @@ h1 {
 .check-in-reference-note {
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+.inline-link-button {
+  padding: 0;
+  border: 0;
+  color: var(--accent-strong);
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 
 .scale-pip,

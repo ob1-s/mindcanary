@@ -9,6 +9,7 @@ import {
 import type { PlatformCapabilityModel } from "./platform";
 import type { LocalServiceState } from "./setup";
 import type { ConnectionStatusModel } from "./source-status";
+import type { RuntimeDiagnostics } from "./daemon-api";
 
 export interface SupportDiagnosticsModel {
   appVersion: string;
@@ -18,6 +19,7 @@ export interface SupportDiagnosticsModel {
 export interface SupportDiagnosticsInput {
   appVersion: string;
   serviceState: LocalServiceState;
+  runtime?: RuntimeDiagnostics;
   connections?: ConnectionStatusModel;
   platform?: PlatformCapabilityModel;
   localDataAvailable: boolean;
@@ -57,6 +59,7 @@ export function createSupportDiagnostics(
     "Report format: 1",
     `App version: ${input.appVersion}`,
     `Protocol version: ${PROTOCOL_VERSION}`,
+    `Runtime: ${runtimeLabel(input.runtime)}`,
     `Local service: ${input.serviceState}`,
     `Local data summary: ${input.localDataAvailable ? "available" : "unavailable"}`,
     `Environment: ${
@@ -74,6 +77,14 @@ export function createSupportDiagnostics(
     appVersion: input.appVersion,
     reportText: lines.join("\n"),
   };
+}
+
+function runtimeLabel(runtime: RuntimeDiagnostics | undefined): string {
+  if (runtime === undefined) {
+    return "unavailable";
+  }
+  const profile = runtime.profile ?? "default";
+  return `${runtime.runtime} · ${profile}`;
 }
 
 function diagnosticSourceLines(

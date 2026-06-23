@@ -295,6 +295,17 @@ export type ProtocolRequest =
       check_in: CheckInRecord;
     }
   | {
+      type: "prepare_delete_latest_check_in";
+      protocol_version: typeof PROTOCOL_VERSION;
+      local_date: string;
+    }
+  | {
+      type: "delete_latest_check_in";
+      protocol_version: typeof PROTOCOL_VERSION;
+      local_date: string;
+      confirmation_token: string;
+    }
+  | {
       type: "save_annotation";
       protocol_version: typeof PROTOCOL_VERSION;
       annotation: AnnotationRecord;
@@ -444,6 +455,20 @@ export type ProtocolResponse =
       protocol_version: typeof PROTOCOL_VERSION;
       check_in_id: string;
       disposition: IngestDisposition;
+    }
+  | {
+      type: "delete_latest_check_in_confirmation";
+      protocol_version: typeof PROTOCOL_VERSION;
+      confirmation_token: string;
+      expires_at: string;
+      local_date: string;
+      check_in_id: string;
+    }
+  | {
+      type: "check_in_deleted";
+      protocol_version: typeof PROTOCOL_VERSION;
+      local_date: string;
+      check_in_id: string;
     }
   | {
       type: "annotation_saved";

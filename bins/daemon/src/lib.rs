@@ -61,7 +61,7 @@ struct OsLifecycleRuntimeStatus {
     sleep_events: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum DestructiveConfirmation {
     ClearAll {
         token: uuid::Uuid,
@@ -84,6 +84,12 @@ enum DestructiveConfirmation {
         token: uuid::Uuid,
         expires_at: DateTime<Utc>,
         annotation_id: uuid::Uuid,
+    },
+    DeleteLatestCheckIn {
+        token: uuid::Uuid,
+        expires_at: DateTime<Utc>,
+        local_date: String,
+        check_in_id: uuid::Uuid,
     },
 }
 
@@ -117,6 +123,14 @@ impl DaemonState {
             ProtocolRequest::GetSourceStatus { .. } => self.source_status(now),
             ProtocolRequest::IngestAggregate { batch, .. } => self.ingest_aggregate(&batch, now),
             ProtocolRequest::SubmitCheckIn { check_in, .. } => self.submit_check_in(&check_in, now),
+            ProtocolRequest::PrepareDeleteLatestCheckIn { local_date, .. } => {
+                self.prepare_delete_latest_check_in(&local_date, now)
+            }
+            ProtocolRequest::DeleteLatestCheckIn {
+                local_date,
+                confirmation_token,
+                ..
+            } => self.delete_latest_check_in(&local_date, confirmation_token, now),
             ProtocolRequest::SaveAnnotation { annotation, .. } => self.save_annotation(&annotation),
             ProtocolRequest::PrepareDeleteAnnotation { annotation_id, .. } => {
                 self.prepare_delete_annotation(annotation_id, now)
@@ -248,7 +262,8 @@ impl DaemonState {
         let Ok(mut confirmation) = self.destructive_confirmation.lock() else {
             return internal_error_response();
         };
-        let Some(DestructiveConfirmation::Backup { token, expires_at }) = *confirmation else {
+        let Some(DestructiveConfirmation::Backup { token, expires_at }) = confirmation.clone()
+        else {
             return invalid_confirmation_response();
         };
         if token != confirmation_token || expires_at < now {
@@ -347,7 +362,8 @@ impl DaemonState {
         let Ok(mut confirmation) = self.destructive_confirmation.lock() else {
             return internal_error_response();
         };
-        let Some(DestructiveConfirmation::Export { token, expires_at }) = *confirmation else {
+        let Some(DestructiveConfirmation::Export { token, expires_at }) = confirmation.clone()
+        else {
             return invalid_confirmation_response();
         };
         if token != confirmation_token || expires_at < now {
@@ -382,6 +398,83 @@ impl DaemonState {
                 check_in_id: check_in.check_in_id,
                 disposition,
             },
+            Err(error) => storage_error_response(&error),
+        }
+    }
+
+    fn prepare_delete_latest_check_in(
+        &self,
+        local_date: &str,
+        now: DateTime<Utc>,
+    ) -> ProtocolResponse {
+        let Ok(store) = self.store.lock() else {
+            return internal_error_response();
+        };
+        let check_in_id = match store.latest_check_in_id_for_local_date(local_date) {
+            Ok(Some(check_in_id)) => check_in_id,
+            Ok(None) => return invalid_request_response(),
+            Err(error) => return storage_error_response(&error),
+        };
+        drop(store);
+
+        let Ok(token) = random_confirmation_token() else {
+            return internal_error_response();
+        };
+        let expires_at = now + Duration::minutes(CLEAR_LOCAL_RECORDS_CONFIRMATION_MINUTES);
+        let Ok(mut confirmation) = self.destructive_confirmation.lock() else {
+            return internal_error_response();
+        };
+        *confirmation = Some(DestructiveConfirmation::DeleteLatestCheckIn {
+            token,
+            expires_at,
+            local_date: local_date.to_owned(),
+            check_in_id,
+        });
+
+        ProtocolResponse::DeleteLatestCheckInConfirmation {
+            protocol_version: PROTOCOL_VERSION,
+            confirmation_token: token,
+            expires_at,
+            local_date: local_date.to_owned(),
+            check_in_id,
+        }
+    }
+
+    fn delete_latest_check_in(
+        &self,
+        local_date: &str,
+        confirmation_token: uuid::Uuid,
+        now: DateTime<Utc>,
+    ) -> ProtocolResponse {
+        let Ok(mut confirmation) = self.destructive_confirmation.lock() else {
+            return internal_error_response();
+        };
+        let Some(DestructiveConfirmation::DeleteLatestCheckIn {
+            token,
+            expires_at,
+            local_date: confirmed_local_date,
+            check_in_id,
+        }) = confirmation.clone()
+        else {
+            return invalid_confirmation_response();
+        };
+        if token != confirmation_token || expires_at < now || confirmed_local_date != local_date {
+            return invalid_confirmation_response();
+        }
+
+        let Ok(mut store) = self.store.lock() else {
+            return internal_error_response();
+        };
+        match store.delete_check_in(check_in_id) {
+            Ok(true) => {
+                *confirmation = None;
+                ProtocolResponse::CheckInDeleted {
+                    protocol_version: PROTOCOL_VERSION,
+                    local_date: local_date.to_owned(),
+                    check_in_id,
+                }
+            }
+            Ok(false) => invalid_request_response(),
             Err(error) => storage_error_response(&error),
         }
     }
@@ -454,7 +547,7 @@ impl DaemonState {
             token,
             expires_at,
             annotation_id: confirmed_annotation_id,
-        }) = *confirmation
+        }) = confirmation.clone()
         else {
             return invalid_confirmation_response();
         };
@@ -656,7 +749,8 @@ impl DaemonState {
         let Ok(mut confirmation) = self.destructive_confirmation.lock() else {
             return internal_error_response();
         };
-        let Some(DestructiveConfirmation::ClearAll { token, expires_at }) = *confirmation else {
+        let Some(DestructiveConfirmation::ClearAll { token, expires_at }) = confirmation.clone()
+        else {
             return invalid_confirmation_response();
         };
         if token != confirmation_token || expires_at < now {
@@ -728,7 +822,7 @@ impl DaemonState {
             token,
             expires_at,
             signal: confirmed_signal,
-        }) = *confirmation
+        }) = confirmation.clone()
         else {
             return invalid_confirmation_response();
         };
@@ -2026,6 +2120,15 @@ mod tests {
         }
     }
 
+    fn check_in_request_at(check_in_id: Uuid, hour: u32, minute: u32) -> ProtocolRequest {
+        let mut request = check_in_request(check_in_id);
+        let ProtocolRequest::SubmitCheckIn { check_in, .. } = &mut request else {
+            unreachable!();
+        };
+        check_in.occurred_at = Utc.with_ymd_and_hms(2026, 6, 14, hour, minute, 0).unwrap();
+        request
+    }
+
     fn annotation_request(annotation_id: Uuid) -> ProtocolRequest {
         ProtocolRequest::SaveAnnotation {
             protocol_version: PROTOCOL_VERSION,
@@ -2438,6 +2541,59 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn confirmation_bound_delete_removes_latest_check_in_for_day() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let state = state(&temp);
+        let first_id = Uuid::now_v7();
+        let second_id = Uuid::now_v7();
+
+        let _ = state.handle_request(check_in_request_at(first_id, 12, 0), now());
+        let _ = state.handle_request(check_in_request_at(second_id, 12, 5), now());
+
+        let prepared = state.handle_request(
+            ProtocolRequest::PrepareDeleteLatestCheckIn {
+                protocol_version: PROTOCOL_VERSION,
+                local_date: "2026-06-14".to_owned(),
+            },
+            now(),
+        );
+        let ProtocolResponse::DeleteLatestCheckInConfirmation {
+            confirmation_token,
+            check_in_id,
+            ..
+        } = prepared
+        else {
+            panic!("expected latest check-in delete confirmation");
+        };
+        assert_eq!(check_in_id, second_id);
+
+        assert_eq!(
+            state.handle_request(
+                ProtocolRequest::DeleteLatestCheckIn {
+                    protocol_version: PROTOCOL_VERSION,
+                    local_date: "2026-06-14".to_owned(),
+                    confirmation_token,
+                },
+                now(),
+            ),
+            ProtocolResponse::CheckInDeleted {
+                protocol_version: PROTOCOL_VERSION,
+                local_date: "2026-06-14".to_owned(),
+                check_in_id: second_id,
+            }
+        );
+
+        let store = state.store.lock().unwrap();
+        assert_eq!(store.check_in_count().unwrap(), 1);
+        assert_eq!(
+            store
+                .latest_check_in_id_for_local_date("2026-06-14")
+                .unwrap(),
+            Some(first_id)
+        );
     }
 
     #[test]

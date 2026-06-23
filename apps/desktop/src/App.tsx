@@ -12,6 +12,7 @@ import {
   type AnnotationRecord,
   type CheckInRecord,
   type ContextTag,
+  type ProtocolResponse,
   type SignalId,
 } from "@mindcanary/protocol";
 
@@ -61,6 +62,7 @@ import {
 import {
   daemonApi,
   type LocalServiceAutostartStatus,
+  type RuntimeDiagnostics,
 } from "./daemon-api";
 import {
   createSupportDiagnostics,
@@ -121,6 +123,13 @@ import {
 
 type AppSection = "today" | "history" | "sources" | "data";
 
+interface CheckInDeletionConfirmationModel {
+  localDate: string;
+  checkInId: string;
+  confirmationToken: string;
+  expiresAt: string;
+}
+
 export function App() {
   const [serviceState, setServiceState] =
     useState<LocalServiceState>("checking");
@@ -154,6 +163,8 @@ export function App() {
     useState<SignalDeletionConfirmationModel>();
   const [annotationDeletion, setAnnotationDeletion] =
     useState<AnnotationDeletionConfirmationModel>();
+  const [checkInDeletion, setCheckInDeletion] =
+    useState<CheckInDeletionConfirmationModel>();
   const [notice, setNotice] = useState<string>();
   const [refreshing, setRefreshing] = useState(false);
   const [connectorConnecting, setConnectorConnecting] = useState(false);
@@ -164,6 +175,8 @@ export function App() {
   const [appVersion, setAppVersion] = useState<string>();
   const [supportDiagnostics, setSupportDiagnostics] =
     useState<SupportDiagnosticsModel>();
+  const [runtimeDiagnostics, setRuntimeDiagnostics] =
+    useState<RuntimeDiagnostics>();
 
   async function submitAnnotation(annotation: AnnotationRecord) {
     try {
@@ -315,6 +328,7 @@ export function App() {
     restoreBackupOpen ||
     signalDeletion !== undefined ||
     annotationDeletion !== undefined ||
+    checkInDeletion !== undefined ||
     localRemoval !== undefined ||
     annotationDraftState !== undefined ||
     supportDiagnostics !== undefined;
@@ -325,6 +339,10 @@ export function App() {
       .appVersion()
       .then(setAppVersion)
       .catch(() => setAppVersion(undefined));
+    void daemonApi
+      .runtimeDiagnostics()
+      .then(setRuntimeDiagnostics)
+      .catch(() => setRuntimeDiagnostics(undefined));
   }, []);
 
   useEffect(() => {
@@ -365,6 +383,7 @@ export function App() {
       createSupportDiagnostics({
         appVersion,
         serviceState,
+        runtime: runtimeDiagnostics,
         connections,
         platform,
         localDataAvailable: dataControl !== undefined && !dataUnavailable,
@@ -626,6 +645,33 @@ export function App() {
     }
   }
 
+  async function prepareCheckInDeletion(localDate: string): Promise<void> {
+    try {
+      const response = await daemonApi.prepareDeleteLatestCheckIn(localDate);
+      setCheckInDeletion(toCheckInDeletionConfirmation(response));
+    } catch {
+      setNotice("The latest check-in for that day could not be reviewed.");
+    }
+  }
+
+  async function confirmCheckInDeletion(): Promise<void> {
+    if (checkInDeletion === undefined) {
+      return;
+    }
+    try {
+      await daemonApi.deleteLatestCheckIn(
+        checkInDeletion.localDate,
+        checkInDeletion.confirmationToken,
+      );
+      setCheckInDeletion(undefined);
+      setNotice("Latest check-in deleted.");
+      await refreshDashboard();
+    } catch {
+      setNotice("The confirmation expired. Try again.");
+      setCheckInDeletion(undefined);
+    }
+  }
+
   async function confirmLocalRemoval(
     confirmationPhrase: string,
   ): Promise<void> {
@@ -708,6 +754,7 @@ export function App() {
       <Header
         activeSection={activeSection}
         onSelectSection={setActiveSection}
+        runtimeDiagnostics={runtimeDiagnostics}
         serviceState={serviceState}
         showNavigation={!onboarding.show}
       />
@@ -763,7 +810,13 @@ export function App() {
             {activeSection === "today" && (
               <div className="dashboard-grid">
                 <div className="primary-column">
-                  <CheckInPanel onSubmit={submitCheckIn} timeline={timeline} />
+                  <CheckInPanel
+                    onPrepareDeleteLatest={(localDate) =>
+                      void prepareCheckInDeletion(localDate)
+                    }
+                    onSubmit={submitCheckIn}
+                    timeline={timeline}
+                  />
                   <button
                     className="annotation-launcher"
                     onClick={() =>
@@ -808,6 +861,9 @@ export function App() {
                   }}
                   onDeleteAnnotation={(annotationId) =>
                     void prepareAnnotationDeletion(annotationId)
+                  }
+                  onDeleteLatestCheckIn={(localDate) =>
+                    void prepareCheckInDeletion(localDate)
                   }
                 />
               </div>
@@ -912,6 +968,13 @@ export function App() {
           onConfirm={confirmAnnotationDeletion}
         />
       )}
+      {checkInDeletion !== undefined && (
+        <CheckInDeleteDialog
+          model={checkInDeletion}
+          onCancel={() => setCheckInDeletion(undefined)}
+          onConfirm={confirmCheckInDeletion}
+        />
+      )}
       {localRemoval !== undefined && (
         <LocalRemovalDialog
           model={localRemoval}
@@ -969,6 +1032,20 @@ function isAvailableComputerActivityCapability(
     capability.id === "os_active_idle_duration" &&
     capability.status === "available"
   );
+}
+
+function toCheckInDeletionConfirmation(
+  response: ProtocolResponse,
+): CheckInDeletionConfirmationModel {
+  if (response.type !== "delete_latest_check_in_confirmation") {
+    throw new TypeError("Unexpected check-in deletion response.");
+  }
+  return {
+    localDate: response.local_date,
+    checkInId: response.check_in_id,
+    confirmationToken: response.confirmation_token,
+    expiresAt: response.expires_at,
+  };
 }
 
 function TagSelector({
@@ -1545,11 +1622,13 @@ function TimelinePanel({
   onAddAnnotation,
   onEditAnnotation,
   onDeleteAnnotation,
+  onDeleteLatestCheckIn,
 }: {
   model?: DailyTimelineDashboardModel;
   onAddAnnotation: (date: string) => void;
   onEditAnnotation: (record: AnnotationRecord) => void;
   onDeleteAnnotation: (annotationId: string) => void;
+  onDeleteLatestCheckIn: (date: string) => void;
 }) {
   return (
     <Panel
@@ -1698,6 +1777,15 @@ function TimelinePanel({
                             Context: {day.checkIn.contextLabels.join(", ")}
                           </small>
                         )}
+                        <div className="timeline-annotation-actions">
+                          <button
+                            className="quiet-button danger-button"
+                            onClick={() => onDeleteLatestCheckIn(day.localDate)}
+                            type="button"
+                          >
+                            Delete latest check-in
+                          </button>
+                        </div>
                       </div>
                     )}
                     {day.annotations.map((annotation) => (
@@ -1834,11 +1922,13 @@ function formatCompact(value: number): string {
 
 function Header({
   activeSection,
+  runtimeDiagnostics,
   serviceState,
   showNavigation,
   onSelectSection,
 }: {
   activeSection: AppSection;
+  runtimeDiagnostics?: RuntimeDiagnostics;
   serviceState: LocalServiceState;
   showNavigation: boolean;
   onSelectSection: (section: AppSection) => void;
@@ -1874,6 +1964,12 @@ function Header({
         </nav>
       )}
       <div className="service-status" data-state={serviceState}>
+        {runtimeDiagnostics?.profile !== undefined &&
+          runtimeDiagnostics.profile !== null && (
+            <span className="profile-pill">
+              Dev profile: {runtimeDiagnostics.profile}
+            </span>
+          )}
         <span className="status-dot" aria-hidden="true" />
         {status}
       </div>
@@ -1947,9 +2043,11 @@ function SetupChecklist({
 }
 
 function CheckInPanel({
+  onPrepareDeleteLatest,
   onSubmit,
   timeline,
 }: {
+  onPrepareDeleteLatest: (localDate: string) => void;
   onSubmit: (checkIn: CheckInRecord) => Promise<boolean>;
   timeline?: DailyTimelineDashboardModel;
 }) {
@@ -2117,7 +2215,14 @@ function CheckInPanel({
         {submittedLocalDate !== undefined && (
           <p className="check-in-reference-note">
             Saved as a separate check-in. Earlier-day medians are shown only as
-            historical context.
+            historical context.{" "}
+            <button
+              className="inline-link-button"
+              onClick={() => onPrepareDeleteLatest(submittedLocalDate)}
+              type="button"
+            >
+              Delete latest check-in for this day
+            </button>
           </p>
         )}
         {error !== undefined && (
@@ -3385,6 +3490,57 @@ function EmptyState({
       <p>{body}</p>
       {children}
     </div>
+  );
+}
+
+function CheckInDeleteDialog({
+  model,
+  onCancel,
+  onConfirm,
+}: {
+  model: CheckInDeletionConfirmationModel;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [deleting, setDeleting] = useState(false);
+
+  async function remove(): Promise<void> {
+    setDeleting(true);
+    await onConfirm();
+    setDeleting(false);
+  }
+
+  return (
+    <Dialog
+      eyebrow="Delete check-in"
+      onClose={onCancel}
+      title="Delete the latest check-in for this day?"
+      tone="danger"
+    >
+      <p className="dialog-summary">
+        This removes the most recent check-in saved for {model.localDate}. Other
+        check-ins from the same day stay in your local record.
+      </p>
+      <p className="small-copy">Confirmation expires at {model.expiresAt}.</p>
+      <div className="dialog-actions">
+        <button
+          className="secondary-button"
+          disabled={deleting}
+          onClick={onCancel}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="primary-button destructive"
+          disabled={deleting}
+          onClick={() => void remove()}
+          type="button"
+        >
+          {deleting ? "Deleting..." : "Delete latest check-in"}
+        </button>
+      </div>
+    </Dialog>
   );
 }
 

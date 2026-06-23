@@ -893,7 +893,7 @@ dependencies = [
 
 [[package]]
 name = "mindcanary-analytics"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "chrono",
  "mindcanary-protocol",
@@ -904,7 +904,7 @@ dependencies = [
 
 [[package]]
 name = "mindcanary-client"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -922,7 +922,7 @@ dependencies = [
 
 [[package]]
 name = "mindcanary-native-host"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -940,7 +940,7 @@ dependencies = [
 
 [[package]]
 name = "mindcanary-protocol"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -952,7 +952,7 @@ dependencies = [
 
 [[package]]
 name = "mindcanary-storage"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -969,7 +969,7 @@ dependencies = [
 
 [[package]]
 name = "mindcanary-test-support"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -982,7 +982,7 @@ dependencies = [
 
 [[package]]
 name = "mindcanaryd"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "chrono",

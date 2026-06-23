@@ -70,6 +70,10 @@ pub struct LocalRemovalReport {
 }
 
 pub fn ensure_packaged_daemon_service() -> Result<()> {
+    if current_runtime() == ChromeConnectorRuntime::Development {
+        return Ok(());
+    }
+
     let marker_path = package_version_marker_path()?;
     import_user_service_session_environment();
     if daemon_is_ready() && marker_matches(&marker_path, PACKAGE_VERSION) {

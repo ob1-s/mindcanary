@@ -131,7 +131,7 @@ function toConnectionItem(
       if (status.health === "never_seen") {
         statusLabel = "Extension not seen yet";
         detail =
-          "Chrome can reach the local bridge, but no browser aggregate has arrived yet. Reload the extension or use Chrome normally.";
+          "Chrome can reach the local bridge, but no browser aggregate has arrived yet. Buckets usually arrive on a 15-minute cadence while Chrome is active.";
         tone = "attention";
       } else if (status.health === "stale") {
         statusLabel = "No recent browser data";
@@ -158,10 +158,10 @@ function browserStaleDetail(status: SourceStatus, generatedAt: Date): string {
   ) {
     const receivedAt = new Date(status.last_received_at);
     const ageMs = Math.max(0, generatedAt.getTime() - receivedAt.getTime());
-    return `Last browser aggregate arrived ${formatAge(ageMs)}. Chrome may be closed, disabled, or waiting for the next 15-minute bucket.`;
+    return `Last browser aggregate arrived ${formatAge(ageMs)}. Chrome may be closed, disabled, or waiting for its next 15-minute bucket.`;
   }
 
-  return "Chrome can reach the local bridge, but no recent browser aggregate has arrived.";
+  return "Chrome can reach the local bridge, but no recent browser aggregate has arrived. Buckets usually arrive on a 15-minute cadence while Chrome is active.";
 }
 
 function sourceDetail(status: SourceStatus, generatedAt: Date): string {
@@ -171,7 +171,11 @@ function sourceDetail(status: SourceStatus, generatedAt: Date): string {
   ) {
     const receivedAt = new Date(status.last_received_at);
     const ageMs = Math.max(0, generatedAt.getTime() - receivedAt.getTime());
-    return `Last data received ${formatAge(ageMs)}.`;
+    const cadence =
+      status.source === "check_in"
+        ? ""
+        : " New local buckets usually arrive every 15 minutes while the source is active.";
+    return `Last data received ${formatAge(ageMs)}.${cadence}`;
   }
 
   switch (status.health) {
@@ -182,7 +186,7 @@ function sourceDetail(status: SourceStatus, generatedAt: Date): string {
     case "active":
       return status.source === "check_in"
         ? "Available whenever you choose to add one."
-        : "Connected; waiting for the first local aggregate.";
+        : "Connected; waiting for the first local aggregate. Buckets usually arrive every 15 minutes while the source is active.";
     case "never_seen":
     case "stale":
       return "No local data has been received yet.";
