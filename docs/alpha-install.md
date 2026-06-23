@@ -130,7 +130,7 @@ flow first, then uninstall the package.
 To uninstall the package:
 
 ```bash
-sudo apt remove mind-canary
+sudo apt remove mindcanary
 ```
 
 ## What Feedback Helps
