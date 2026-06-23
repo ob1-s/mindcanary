@@ -132,11 +132,9 @@ pub async fn save_annotation(annotation: AnnotationRecord) -> Result<ProtocolRes
 }
 
 #[tauri::command]
-pub async fn prepare_delete_annotation(
-    annotation_id: String,
-) -> Result<ProtocolResponse, String> {
-    let annotation_id = uuid::Uuid::parse_str(&annotation_id)
-        .map_err(|_| "invalid_annotation_id".to_owned())?;
+pub async fn prepare_delete_annotation(annotation_id: String) -> Result<ProtocolResponse, String> {
+    let annotation_id =
+        uuid::Uuid::parse_str(&annotation_id).map_err(|_| "invalid_annotation_id".to_owned())?;
     client()
         .prepare_delete_annotation(annotation_id)
         .await
@@ -148,8 +146,8 @@ pub async fn delete_annotation(
     annotation_id: String,
     confirmation_token: String,
 ) -> Result<ProtocolResponse, String> {
-    let annotation_id = uuid::Uuid::parse_str(&annotation_id)
-        .map_err(|_| "invalid_annotation_id".to_owned())?;
+    let annotation_id =
+        uuid::Uuid::parse_str(&annotation_id).map_err(|_| "invalid_annotation_id".to_owned())?;
     let confirmation_token = uuid::Uuid::parse_str(&confirmation_token)
         .map_err(|_| "invalid_confirmation_token".to_owned())?;
     client()

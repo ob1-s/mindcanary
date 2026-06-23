@@ -14,6 +14,17 @@ use serde::Serialize;
 const PACKAGED_DAEMON_PATH: &str = "/usr/lib/mindcanary/mindcanaryd";
 const PACKAGED_NATIVE_HOST_PATH: &str = "/usr/lib/mindcanary/mindcanary-native-host";
 const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
+const USER_SERVICE_NAME: &str = "mindcanaryd.service";
+const USER_SERVICE_SESSION_ENVIRONMENT: &[&str] = &[
+    "XDG_CURRENT_DESKTOP",
+    "XDG_SESSION_TYPE",
+    "DESKTOP_SESSION",
+    "DISPLAY",
+    "WAYLAND_DISPLAY",
+    "DBUS_SESSION_BUS_ADDRESS",
+    "XDG_RUNTIME_DIR",
+    "XAUTHORITY",
+];
 pub const LOCAL_REMOVAL_CONFIRMATION_PHRASE: &str = "DELETE LOCAL MINDCANARY DATA";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -53,7 +64,12 @@ pub struct LocalRemovalReport {
 
 pub fn ensure_packaged_daemon_service() -> Result<()> {
     let marker_path = package_version_marker_path()?;
+    import_user_service_session_environment();
     if daemon_is_ready() && marker_matches(&marker_path, PACKAGE_VERSION) {
+        if daemon_service_needs_session_environment_refresh() {
+            restart_user_service()?;
+            wait_for_daemon_socket(Duration::from_secs(5))?;
+        }
         return Ok(());
     }
 
@@ -203,7 +219,10 @@ fn native_host_manifest_uninstall_command(
 ) -> Result<Command> {
     validate_executable(native_host_path, "native host")?;
     let mut command = Command::new(native_host_path);
-    command.arg("--uninstall-manifest").arg("--browser").arg(browser);
+    command
+        .arg("--uninstall-manifest")
+        .arg("--browser")
+        .arg(browser);
     Ok(command)
 }
 
@@ -331,8 +350,91 @@ fn stop_user_service_if_available() {
         .arg("--user")
         .arg("disable")
         .arg("--now")
-        .arg("mindcanaryd.service")
+        .arg(USER_SERVICE_NAME)
         .status();
+}
+
+fn restart_user_service() -> Result<()> {
+    let status = Command::new("systemctl")
+        .arg("--user")
+        .arg("restart")
+        .arg(USER_SERVICE_NAME)
+        .status()
+        .context("restart MindCanary user service")?;
+    anyhow::ensure!(
+        status.success(),
+        "MindCanary user service restart failed with status {status}"
+    );
+    Ok(())
+}
+
+fn import_user_service_session_environment() {
+    let names = session_environment_variable_names();
+    if names.is_empty() {
+        return;
+    }
+
+    let _ = Command::new("systemctl")
+        .arg("--user")
+        .arg("import-environment")
+        .args(names)
+        .status();
+}
+
+fn session_environment_variable_names() -> Vec<&'static str> {
+    USER_SERVICE_SESSION_ENVIRONMENT
+        .iter()
+        .copied()
+        .filter(|name| env::var_os(name).is_some_and(|value| !value.is_empty()))
+        .collect()
+}
+
+fn daemon_service_needs_session_environment_refresh() -> bool {
+    if !session_environment_variable_names()
+        .iter()
+        .any(|name| matches!(*name, "XDG_CURRENT_DESKTOP" | "XDG_SESSION_TYPE"))
+    {
+        return false;
+    }
+
+    let Some(pid) = user_service_main_pid() else {
+        return false;
+    };
+    let Ok(environ) = fs::read(format!("/proc/{pid}/environ")) else {
+        return false;
+    };
+
+    !environ_contains_name(&environ, "XDG_CURRENT_DESKTOP")
+        || !environ_contains_name(&environ, "XDG_SESSION_TYPE")
+}
+
+fn user_service_main_pid() -> Option<u32> {
+    let output = Command::new("systemctl")
+        .arg("--user")
+        .arg("show")
+        .arg(USER_SERVICE_NAME)
+        .arg("--property")
+        .arg("MainPID")
+        .arg("--value")
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    String::from_utf8(output.stdout)
+        .ok()?
+        .trim()
+        .parse::<u32>()
+        .ok()
+        .filter(|pid| *pid > 0)
+}
+
+fn environ_contains_name(environ: &[u8], name: &str) -> bool {
+    let prefix = format!("{name}=");
+    environ
+        .split(|byte| *byte == b'\0')
+        .any(|entry| entry.starts_with(prefix.as_bytes()))
 }
 
 fn validate_executable(path: &Path, label: &str) -> Result<()> {
@@ -657,5 +759,15 @@ mod tests {
 
         assert!(!report.browser_extension_storage_removed);
         assert!(!report.user_exports_removed);
+    }
+
+    #[test]
+    fn nul_delimited_environment_lookup_matches_complete_names() {
+        let environment = b"XDG_CURRENT_DESKTOP=pop:GNOME\0XDG_SESSION_TYPE=x11\0";
+
+        assert!(environ_contains_name(environment, "XDG_CURRENT_DESKTOP"));
+        assert!(environ_contains_name(environment, "XDG_SESSION_TYPE"));
+        assert!(!environ_contains_name(environment, "CURRENT_DESKTOP"));
+        assert!(!environ_contains_name(environment, "XDG_CURRENT"));
     }
 }
