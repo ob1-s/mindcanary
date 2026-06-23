@@ -30,7 +30,7 @@ Your data stays local. You can export it. You can remove it.
 
 1. Download the `.deb` file from the GitHub Release.
 2. If you are testing the optional Chrome connector, also download
-   `MindCanary-Chrome-Extension_0.1.2.zip`.
+   `MindCanary-Chrome-Extension_0.1.3.zip`.
 3. Open the folder where you downloaded it.
 4. Double-click the `.deb` file and install it with your system software
    installer.
@@ -41,7 +41,7 @@ If double-click install does not work, open a terminal in the download folder
 and run:
 
 ```bash
-sudo apt install ./MindCanary_0.1.2_amd64.deb
+sudo apt install ./MindCanary_0.1.3_amd64.deb
 ```
 
 ## Update An Existing Install
@@ -53,7 +53,7 @@ first is recommended while the app is in alpha.
 From a terminal in the download folder:
 
 ```bash
-sudo apt install ./MindCanary_0.1.2_amd64.deb
+sudo apt install ./MindCanary_0.1.3_amd64.deb
 ```
 
 Reopen MindCanary and confirm your prior History is present. Report an update
@@ -67,6 +67,7 @@ After opening MindCanary:
 - check-ins should be **Ready**;
 - Chrome may say **Not connected** or **Disabled**. That is okay for this
   alpha.
+- login startup can be changed later from **Sources**.
 
 The useful first test is simple:
 
@@ -91,7 +92,7 @@ titles, page text, search terms, or browsing history.
 To install the bundled Chrome connector:
 
 1. Install and open the MindCanary desktop app first.
-2. Unzip `MindCanary-Chrome-Extension_0.1.2.zip`.
+2. Unzip `MindCanary-Chrome-Extension_0.1.3.zip`.
 3. Open Chrome and go to `chrome://extensions`.
 4. Enable **Developer mode**.
 5. Choose **Load unpacked**.

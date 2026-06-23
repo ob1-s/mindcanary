@@ -48,6 +48,8 @@ scripts/with-dev-profile.sh onboarding -- \
 
 Chrome remains connected to the personal profile unless Chrome and its native
 host are also configured inside the isolated environment.
+Login startup is managed only by the packaged Linux app; development profiles
+show that setting as unavailable.
 
 ## Update the installed personal app
 
@@ -59,7 +61,7 @@ pnpm backup:local
 pnpm package:linux
 
 sudo apt install --reinstall \
-  ./apps/desktop/src-tauri/target/release/bundle/deb/MindCanary_0.1.2_amd64.deb
+  ./apps/desktop/src-tauri/target/release/bundle/deb/MindCanary_0.1.3_amd64.deb
 
 systemctl --user daemon-reload
 systemctl --user restart mindcanaryd.service

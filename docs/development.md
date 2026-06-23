@@ -560,9 +560,10 @@ pnpm package:linux
 The packaging command builds release versions of `mindcanaryd` and
 `mindcanary-native-host`, includes them under `/usr/lib/mindcanary`, and
 produces a Debian package under the Tauri bundle output directory. When the
-packaged desktop cannot reach the daemon, it installs and enables the
-user-level service and then retries. Development builds do not contain those
-packaged helpers and continue to use the manually started development daemon.
+packaged desktop cannot reach the daemon, it installs and starts the user-level
+service and then retries. Login startup remains a user-controlled app setting.
+Development builds do not contain those packaged helpers and continue to use the
+manually started development daemon.
 
 The webview has a narrow command surface for daemon health, source status,
 insights, daily history, collection settings, typed check-in submission, local

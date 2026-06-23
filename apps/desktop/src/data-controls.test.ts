@@ -15,7 +15,7 @@ import {
 describe("local data controls", () => {
   it("creates a preview-only support report without private record details", () => {
     const model = createSupportDiagnostics({
-      appVersion: "0.1.2",
+      appVersion: "0.1.3",
       serviceState: "ready",
       localDataAvailable: true,
       platform: {
@@ -38,7 +38,7 @@ describe("local data controls", () => {
       },
     });
 
-    expect(model.reportText).toContain("App version: 0.1.2");
+    expect(model.reportText).toContain("App version: 0.1.3");
     expect(model.reportText).toContain("Chrome extension: Connected");
     expect(model.reportText).toContain("Linux · GNOME · X11");
     expect(model.reportText).not.toContain("Private timing");
