@@ -115,14 +115,14 @@ button {
   height: 34px;
   place-items: center;
   border-radius: 9px;
-  background: #f4f1e8;
+  background: #fef8ed;
   overflow: hidden;
 }
 
 .brand-mark img {
+  display: block;
   width: 32px;
   height: 32px;
-  display: block;
 }
 
 .topbar-nav {

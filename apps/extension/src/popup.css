@@ -22,8 +22,31 @@ body {
   padding: 18px;
 }
 
+.popup-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.popup-brand-mark {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 7px;
+  background: #fef8ed;
+  overflow: hidden;
+}
+
+.popup-brand-mark img {
+  display: block;
+  width: 25px;
+  height: 25px;
+}
+
 .eyebrow {
-  margin: 0 0 4px;
+  margin: 0;
   color: #537062;
   font-size: 0.72rem;
   font-weight: 700;

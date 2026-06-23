@@ -114,6 +114,14 @@ Pinned:
 - Node.js 22 or later
 - pnpm 10.8.1
 
+## Brand Assets
+
+The editable logo mark is `apps/desktop/public/mindcanary-mark.svg`. The
+desktop launcher icon source is `apps/desktop/src-tauri/icons/app-icon.svg`;
+`apps/desktop/src-tauri/icons/icon.png` and the browser-extension PNG icons are
+generated from that SVG. Keep the bird/wave mark in sync across desktop,
+extension, and release docs.
+
 Install JavaScript dependencies:
 
 ```bash
