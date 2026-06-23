@@ -46,9 +46,11 @@ hash_file() {
 require_command git
 require_command dpkg-deb
 require_command sha256sum
+require_command zip
 
 if [[ "$build" == true ]]; then
   require_command pnpm
+  pnpm --filter @mindcanary/extension build
   pnpm package:linux
 fi
 
@@ -69,10 +71,20 @@ release_name="mindcanary-${version}-linux-alpha-${timestamp}"
 release_dir="$root/target/linux-alpha-release/$release_name"
 latest_link="$root/target/linux-alpha-release/latest"
 deb_name="MindCanary_${version}_${arch}.deb"
+extension_source_dir="$root/apps/extension/dist"
+extension_dir_name="chrome-extension"
+extension_zip_name="MindCanary-Chrome-Extension_${version}.zip"
+
+if [[ ! -f "$extension_source_dir/manifest.json" ]]; then
+  printf 'Expected built Chrome extension at %s.\n' "$extension_source_dir" >&2
+  printf 'Run `pnpm --filter @mindcanary/extension build`, or rerun this script with --build.\n' >&2
+  exit 1
+fi
 
 rm -rf "$release_dir"
 mkdir -p "$release_dir"
 cp "$source_deb" "$release_dir/$deb_name"
+cp -R "$extension_source_dir" "$release_dir/$extension_dir_name"
 cp docs/alpha-install.md "$release_dir/INSTALL.md"
 cp docs/alpha-feedback.md "$release_dir/FEEDBACK.md"
 cp docs/privacy-policy.md "$release_dir/PRIVACY.md"
@@ -81,10 +93,12 @@ cp docs/support.md "$release_dir/SUPPORT.md"
 
 (
   cd "$release_dir"
-  sha256sum "$deb_name" >SHA256SUMS
+  zip -qr "$extension_zip_name" "$extension_dir_name"
+  sha256sum "$deb_name" "$extension_zip_name" >SHA256SUMS
 )
 
 deb_hash="$(hash_file "$release_dir/$deb_name")"
+extension_hash="$(hash_file "$release_dir/$extension_zip_name")"
 commit="$(git rev-parse HEAD 2>/dev/null || printf unknown)"
 short_commit="$(git rev-parse --short HEAD 2>/dev/null || printf unknown)"
 dirty="$(if [[ -n "$(git status --short)" ]]; then printf yes; else printf no; fi)"
@@ -98,7 +112,9 @@ Debian-based systems.
 ## Download
 
 - Package: \`${deb_name}\`
+- Optional Chrome extension: \`${extension_zip_name}\`
 - SHA-256: \`${deb_hash}\`
+- Extension SHA-256: \`${extension_hash}\`
 - Install guide: \`INSTALL.md\`
 - Feedback guide: \`FEEDBACK.md\`
 - Privacy boundary: \`PRIVACY.md\`
@@ -124,7 +140,10 @@ product.
 6. Open Data and preview support information; confirm it contains no private
    record values.
 
-Chrome is optional and is not the recommended first test for alpha participants.
+Chrome is optional. Testers who choose browser aggregates can unzip
+\`${extension_zip_name}\`, load the bundled \`chrome-extension\` folder from
+\`chrome://extensions\`, and wait up to one 15-minute period for the first
+aggregate batch.
 
 ## Privacy Boundary
 
@@ -150,7 +169,7 @@ private records when reporting issues.
 
 - Linux only for now.
 - Chrome connector setup is optional and still rough without the Chrome Web
-  Store listing.
+  Store listing. It uses the bundled unpacked extension instead.
 - Pattern explanations need enough comparable local history.
 - Missing days remain missing and are not treated as zero.
 - Repeated same-day check-ins are stored separately but summarized by daily
@@ -166,6 +185,7 @@ cat >"$release_dir/GITHUB_RELEASE_DRAFT.md" <<EOF
 Attach these files:
 
 - \`${deb_name}\`
+- \`${extension_zip_name}\`
 - \`SHA256SUMS\`
 - \`INSTALL.md\`
 - \`FEEDBACK.md\`

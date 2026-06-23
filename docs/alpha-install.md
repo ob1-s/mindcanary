@@ -24,14 +24,18 @@ MindCanary currently:
 Please do not send personal exports, database files, or screenshots with
 private values when asking for help.
 
+Your data stays local. You can export it. You can remove it.
+
 ## Install
 
 1. Download the `.deb` file from the GitHub Release.
-2. Open the folder where you downloaded it.
-3. Double-click the `.deb` file and install it with your system software
+2. If you are testing the optional Chrome connector, also download
+   `MindCanary-Chrome-Extension_0.1.2.zip`.
+3. Open the folder where you downloaded it.
+4. Double-click the `.deb` file and install it with your system software
    installer.
-4. Open **MindCanary** from your app launcher.
-5. Add one check-in.
+5. Open **MindCanary** from your app launcher.
+6. Add one check-in.
 
 If double-click install does not work, open a terminal in the download folder
 and run:
@@ -73,15 +77,35 @@ The useful first test is simple:
 
 ## Optional Chrome Connector
 
-The Chrome connector is optional and still has a rougher setup path because the
-Chrome Web Store listing is not ready yet.
+The Chrome connector is optional. MindCanary works with check-ins only.
 
-For this alpha, treat Chrome data as optional. Use the app with check-ins only
-unless the release instructions explicitly include a browser build.
+For this alpha, Chrome is packaged as an unpacked extension because the Chrome
+Web Store listing is not ready yet. This is less polished than a normal store
+install, but it lets you test browser aggregates without copy/pasting extension
+IDs.
 
 When the connector is enabled, it records low-detail aggregates such as tab
 switches and open-tab counts in 15-minute periods. It does not store URLs,
 titles, page text, search terms, or browsing history.
+
+To install the bundled Chrome connector:
+
+1. Install and open the MindCanary desktop app first.
+2. Unzip `MindCanary-Chrome-Extension_0.1.2.zip`.
+3. Open Chrome and go to `chrome://extensions`.
+4. Enable **Developer mode**.
+5. Choose **Load unpacked**.
+6. Select the unzipped `chrome-extension` folder itself, not the parent folder
+   and not the `.zip` file.
+7. Open the MindCanary extension popup. It should show local status, enabled
+   signals, queue state, and whether the native host is connected.
+8. In MindCanary, open **Sources**. Chrome may take up to one 15-minute period
+   to deliver the first aggregate batch.
+
+If Chrome says the extension is disabled, removed, or not connected, MindCanary
+still works with check-ins and computer activity. Removing the extension is
+controlled by Chrome; the desktop app cannot remove browser-owned extension
+storage for you.
 
 ## Export Or Remove Your Data
 
@@ -91,7 +115,12 @@ Inside MindCanary, use the local data controls to:
 - clear local records;
 - review app-owned local removal.
 
-Exports are readable files. Keep them private.
+Exports are readable files. Keep them private. They stay wherever you save
+them; MindCanary will not silently delete exported folders or backups later.
+
+The Data page also has a support-information preview. It is designed to avoid
+private record values, but you should still review it before copying anything
+into an email or chat.
 
 Removing the Linux package does not automatically remove your local records.
 If you want to remove local MindCanary data too, use the app's local removal
@@ -127,9 +156,11 @@ values first.
 ## Known Limitations
 
 - Linux only for now.
-- Chrome connector setup is not ready for ordinary alpha users.
+- Chrome connector setup uses a manually loaded unpacked extension until the
+  Chrome Web Store listing is ready.
 - Pattern explanations need enough comparable local history.
 - Missing days are shown as missing, not treated as zero.
+- Removing the extension is separate from removing local MindCanary records.
 - Local encryption cannot protect against malware running as the same unlocked
   OS user.
 - Support is best-effort during the early alpha.

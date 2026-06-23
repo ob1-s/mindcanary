@@ -34,6 +34,9 @@ Status: local-alpha draft.
 
 ## Browser Connector Limitations
 
+- Alpha Chrome setup uses a bundled unpacked extension until the Chrome Web
+  Store listing is ready. Testers must reload or replace that unpacked folder
+  when a new alpha bundle ships.
 - The extension stores only aggregate batches and operational queue state, not
   URLs, page titles, page text, search terms, or browsing history.
 - Browser aggregates are delivered in aligned 15-minute periods, so the desktop
