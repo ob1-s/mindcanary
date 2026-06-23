@@ -11,7 +11,7 @@ describe("local removal model", () => {
     const model = localRemovalModel();
 
     expect(model.confirmationPhrase).toBe(LOCAL_REMOVAL_CONFIRMATION_PHRASE);
-    expect(model.summaryText).toContain("encrypted database profile");
+    expect(model.summaryText).toContain("encrypted database");
     expect(model.excludedText).toContain("Chrome extension storage");
     expect(model.excludedText).toContain("exports or backups");
     expect(JSON.stringify(model)).not.toMatch(

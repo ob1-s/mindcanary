@@ -115,9 +115,9 @@ export function toCollectorStatusViewModel(
     return {
       state: "needs_setup",
       headline: "Extension identity mismatch",
-      detail: `This ${browserName} installation does not match the identity selected when MindCanary was built.`,
+      detail: `This ${browserName} installation does not match the identity selected when mindcanary was built.`,
       nextActionText:
-        "Remove this unpacked extension and load the current MindCanary build again.",
+        "Remove this unpacked extension and load the current mindcanary build again.",
       enabledSignalText,
       pendingBatchText,
       reducerText,
@@ -192,7 +192,7 @@ export function toCollectorStatusViewModel(
       state: "queued",
       headline: "Aggregates are queued",
       detail:
-        "MindCanary has local aggregate batches waiting for the daemon to acknowledge them.",
+        "There are aggregate batches queued, waiting for the local service to accept them.",
       nextActionText,
       enabledSignalText,
       pendingBatchText,
@@ -294,10 +294,10 @@ function nextActionStatusText(
   showScrollPermissionRequest: boolean,
 ): string {
   if (status.settingsStatus?.state === "unavailable") {
-    return "Start mindcanaryd, run the native-host setup command below, reload the extension, then refresh.";
+    return "Start the local service, run the native-host setup command below, reload the extension, then refresh.";
   }
   if (status.enabledSignals.length === 0) {
-    return "Enable browser aggregates in the desktop app or run mindcanaryctl enable-browser-defaults.";
+    return "Enable browser aggregates in the desktop app under Sources.";
   }
   if (showIdlePermissionRequest) {
     return "Click Allow idle permission so active and idle browser time can be counted.";

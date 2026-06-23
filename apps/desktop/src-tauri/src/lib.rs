@@ -6,6 +6,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::app_version,
             commands::ensure_local_service,
+            commands::local_service_autostart_status,
+            commands::set_local_service_autostart,
             commands::chrome_connector_status,
             commands::connect_chrome,
             commands::complete_local_removal,

@@ -15,6 +15,24 @@ pub async fn ensure_local_service() -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn local_service_autostart_status()
+-> Result<crate::lifecycle::LocalServiceAutostartStatus, String> {
+    Ok(crate::lifecycle::local_service_autostart_status())
+}
+
+#[tauri::command]
+pub async fn set_local_service_autostart(
+    enabled: bool,
+) -> Result<crate::lifecycle::LocalServiceAutostartStatus, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::lifecycle::set_local_service_autostart(enabled)
+    })
+    .await
+    .map_err(|_| "local_service_autostart_failed".to_owned())?
+    .map_err(|_| "local_service_autostart_failed".to_owned())
+}
+
+#[tauri::command]
 pub async fn chrome_connector_status() -> Result<crate::lifecycle::ChromeConnectorStatus, String> {
     Ok(crate::lifecycle::chrome_connector_status())
 }

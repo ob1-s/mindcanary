@@ -56,7 +56,7 @@ export function toSetupChecklistModel(
   return {
     title: complete ? "Private logbook is ready" : "Start your private logbook",
     description: complete
-      ? "MindCanary can keep a local rhythm history. Optional connectors can add context whenever you choose."
+      ? "mindcanary can keep a local rhythm history. Optional connectors can add context whenever you choose."
       : "Start with one check-in or aggregate record. Browser signals are optional context, not a requirement.",
     progressText: `${completedRequiredCount} of ${requiredSteps.length} essentials ready`,
     complete,
@@ -79,7 +79,7 @@ function serviceStep(serviceState: LocalServiceState): SetupStepModel {
       return {
         id: "service",
         title: "Local service",
-        detail: "The dashboard can reach mindcanaryd on this device.",
+        detail: "The local service is running on this device.",
         state: "complete",
         required: true,
         statusLabel: "Ready",
@@ -88,8 +88,7 @@ function serviceStep(serviceState: LocalServiceState): SetupStepModel {
       return {
         id: "service",
         title: "Local service",
-        detail:
-          "Start mindcanaryd, then refresh or reopen the desktop application.",
+        detail: "Start the local service, then refresh or reopen the app.",
         state: "current",
         required: true,
         statusLabel: "Needs attention",
@@ -135,7 +134,7 @@ function browserSignalsStep(
     return {
       id: "browser-signals",
       title: "Browser aggregates",
-      detail: `${enabledCount} privacy-preserving browser ${enabledCount === 1 ? "signal is" : "signals are"} enabled.`,
+      detail: `${enabledCount} browser ${enabledCount === 1 ? "signal is" : "signals are"} enabled.`,
       state: "complete",
       required: false,
       statusLabel: "Ready",

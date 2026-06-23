@@ -57,7 +57,7 @@ describe("connection status model", () => {
 
   it("reports the local daemon independently", () => {
     expect(daemonConnectionItem(true)).toMatchObject({
-      label: "Local daemon",
+      label: "Local service",
       statusLabel: "Running",
       tone: "positive",
     });

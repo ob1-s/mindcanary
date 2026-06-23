@@ -22,35 +22,24 @@ export function localRemovalModel(): LocalRemovalModel {
   return {
     title: "Remove app-owned local data",
     summaryText:
-      "This removes MindCanary's user service, native-host manifests, encrypted database profile, database key, package setup marker, and runtime socket directory.",
+      "This removes mindcanary's local service, browser bridge, encrypted database, and configuration from this device.",
     confirmationText:
-      "Type the confirmation phrase exactly. Export first if you want a readable copy of your records.",
+      "Type the confirmation phrase exactly. Export or back up first if you want to keep your records.",
     excludedText:
-      "Chrome extension storage and user-created exports or backups are controlled outside this action.",
+      "Chrome extension storage and any exports or backups you created are not affected.",
     confirmationPhrase: LOCAL_REMOVAL_CONFIRMATION_PHRASE,
   };
 }
 
 export function localRemovalResultText(report: LocalRemovalReport): string {
-  const removedManifests = report.native_host_manifests_removed.join(", ");
-  const manifestText =
-    removedManifests.length === 0
-      ? "native-host manifests checked"
-      : `native-host manifests removed for ${removedManifests}`;
-  return [
-    report.user_service_removed
-      ? "user service removed"
-      : "user service checked",
-    manifestText,
-    report.database_profile_destroyed
-      ? "database profile destroyed"
-      : "database profile checked",
-    report.package_marker_removed
-      ? "package marker removed"
-      : "package marker not present",
-    report.runtime_socket_dir_removed
-      ? "runtime socket directory removed"
-      : "runtime socket directory not present",
-    "Chrome extension storage and user exports were not removed",
-  ].join("; ");
+  const parts = report.database_profile_destroyed
+    ? [
+        "Local database files, background service, and browser integration files have been removed",
+      ]
+    : [
+        "No active local database was found; background service and browser integration files checked",
+      ];
+
+  parts.push("Chrome extension storage and user exports were not removed");
+  return parts.join("; ");
 }

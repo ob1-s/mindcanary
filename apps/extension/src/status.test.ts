@@ -64,7 +64,7 @@ describe("collector status view model", () => {
 
     expect(model.state).toBe("disabled");
     expect(model.detail).toContain("Enable");
-    expect(model.nextActionText).toContain("enable-browser-defaults");
+    expect(model.nextActionText).toContain("desktop app");
     expect(model.enabledSignalText).toBe("0 enabled signals");
     expect(model.idlePermissionText).toBe(
       "Idle permission not needed for enabled signals",

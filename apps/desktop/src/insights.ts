@@ -74,13 +74,13 @@ const DIRECTION_LABELS: Record<RhythmChangeDirection, string> = {
 };
 
 const READINESS_LABELS: Record<RhythmReadinessStatus, string> = {
-  change_described: "Change described",
-  within_baseline: "Within current range",
-  needs_sustained_change: "Window still forming",
-  missing_current: "No latest value",
-  insufficient_baseline: "Building baseline",
-  zero_baseline: "Needs varied history",
-  unstable_baseline: "Baseline still variable",
+  change_described: "Change noted",
+  within_baseline: "Within your range",
+  needs_sustained_change: "No clear shift yet",
+  missing_current: "No recent value",
+  insufficient_baseline: "Building history",
+  zero_baseline: "Needs more variety",
+  unstable_baseline: "History still varies",
 };
 
 export function createDailyRhythmInsightsRequest(
@@ -167,7 +167,7 @@ function formatBaselineProgress(
   );
   const target = baselineDays + 2;
   const logged = Math.min(summary.daily_snapshot_count, target);
-  return `${logged} of ${target} days logged for the first window comparison. Gaps do not reset this count.`;
+  return `${logged} of ${target} days logged. Gaps don't reset this.`;
 }
 
 function toInsightCard(insight: RhythmInsight): InsightCardModel {
@@ -238,19 +238,19 @@ function toReadinessItem(
 function readinessDetail(readiness: RhythmDimensionReadiness): string {
   switch (readiness.status) {
     case "change_described":
-      return `${readiness.comparable_day_count} prior comparable days supported the description.`;
+      return `Based on ${readiness.comparable_day_count} earlier days.`;
     case "within_baseline":
-      return `${readiness.comparable_day_count} prior comparable days were available; the latest window stayed within the current threshold.`;
+      return `${readiness.comparable_day_count} earlier days available; recent values stayed within your usual range.`;
     case "needs_sustained_change":
-      return `${readiness.comparable_day_count} prior days were available; no complete changed window was described.`;
+      return `${readiness.comparable_day_count} earlier days available; no clear shift seen yet.`;
     case "missing_current":
-      return "No complete comparable window was recorded for the latest local days.";
+      return "No recent data for this signal.";
     case "insufficient_baseline":
-      return `${readiness.comparable_day_count} of ${readiness.minimum_day_count} required prior comparable days are available.`;
+      return `${readiness.comparable_day_count} of ${readiness.minimum_day_count} days needed before comparisons can start.`;
     case "zero_baseline":
-      return "Prior comparable values centered on zero, so a relative comparison was not made.";
+      return "Earlier values were all near zero, so a relative comparison wasn't meaningful.";
     case "unstable_baseline":
-      return "Prior comparable values varied too much for a calm comparison.";
+      return "Earlier values varied too much for a useful comparison.";
   }
 }
 

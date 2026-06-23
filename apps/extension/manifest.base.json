@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "MindCanary",
+  "name": "mindcanary",
   "version": "0.1.2",
   "description": "Local-first personal rhythm collection without browsing content.",
   "minimum_chrome_version": "120",
@@ -14,7 +14,7 @@
     "128": "icons/icon-128.png"
   },
   "action": {
-    "default_title": "MindCanary status",
+    "default_title": "mindcanary status",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",

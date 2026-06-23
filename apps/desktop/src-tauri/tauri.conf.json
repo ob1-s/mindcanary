@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MindCanary",
+  "productName": "mindcanary",
   "version": "0.1.2",
   "identifier": "app.mindcanary.desktop",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "MindCanary",
+        "title": "mindcanary 0.1.2",
         "width": 1180,
         "height": 820,
         "minWidth": 860,
@@ -29,7 +29,7 @@
     "active": true,
     "targets": ["deb"],
     "icon": ["icons/icon.png"],
-    "shortDescription": "MindCanary local-first personal rhythms dashboard",
+    "shortDescription": "mindcanary local-first personal rhythms dashboard",
     "longDescription": "A private journal for understanding how chosen routines change over time without exposing raw browsing data.",
     "linux": {
       "deb": {

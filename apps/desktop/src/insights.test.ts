@@ -105,15 +105,15 @@ describe("daily rhythm insight dashboard model", () => {
     expect(model.readiness).toEqual([
       {
         dimensionLabel: "Browser tabs",
-        statusLabel: "Change described",
-        detail: "4 prior comparable days supported the description.",
+        statusLabel: "Change noted",
+        detail: "Based on 4 earlier days.",
         state: "described",
       },
       {
         dimensionLabel: "Energy check-in",
-        statusLabel: "Within current range",
+        statusLabel: "Within your range",
         detail:
-          "4 prior comparable days were available; the latest window stayed within the current threshold.",
+          "4 earlier days available; recent values stayed within your usual range.",
         state: "stable",
       },
     ]);
@@ -157,14 +157,14 @@ describe("daily rhythm insight dashboard model", () => {
       throw new Error("expected empty model");
     }
     expect(model.emptyTitle).toBe("The canary is listening");
-    expect(model.emptyBody).toContain("Window comparisons begin");
+    expect(model.emptyBody).toContain("comparisons begin");
     expect(model.baselineProgressText).toBe(
-      "2 of 5 days logged for the first window comparison. Gaps do not reset this count.",
+      "2 of 5 days logged. Gaps don't reset this.",
     );
     expect(model.readiness[0]?.detail).toBe(
-      "1 of 3 required prior comparable days are available.",
+      "1 of 3 days needed before comparisons can start.",
     );
-    expect(model.readiness[1]?.statusLabel).toBe("No latest value");
+    expect(model.readiness[1]?.statusLabel).toBe("No recent value");
     expect(JSON.stringify(model)).not.toMatch(BLOCKED_LANGUAGE);
   });
 
@@ -198,9 +198,8 @@ describe("daily rhythm insight dashboard model", () => {
     }
     expect(model.readiness[0]).toEqual({
       dimensionLabel: "Browser tabs",
-      statusLabel: "Window still forming",
-      detail:
-        "3 prior days were available; no complete changed window was described.",
+      statusLabel: "No clear shift yet",
+      detail: "3 earlier days available; no clear shift seen yet.",
       state: "waiting",
     });
     expect(JSON.stringify(model)).not.toMatch(BLOCKED_LANGUAGE);
@@ -236,8 +235,8 @@ describe("daily rhythm insight dashboard model", () => {
     }
     expect(model.readiness[0]).toEqual({
       dimensionLabel: "Browser tabs",
-      statusLabel: "Baseline still variable",
-      detail: "Prior comparable values varied too much for a calm comparison.",
+      statusLabel: "History still varies",
+      detail: "Earlier values varied too much for a useful comparison.",
       state: "waiting",
     });
     expect(JSON.stringify(model)).not.toMatch(BLOCKED_LANGUAGE);

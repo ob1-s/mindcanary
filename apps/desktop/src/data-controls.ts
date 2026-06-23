@@ -53,7 +53,7 @@ export function createSupportDiagnostics(
   input: SupportDiagnosticsInput,
 ): SupportDiagnosticsModel {
   const lines = [
-    "MindCanary support information",
+    "mindcanary support information",
     "Report format: 1",
     `App version: ${input.appVersion}`,
     `Protocol version: ${PROTOCOL_VERSION}`,
@@ -173,7 +173,7 @@ export function toLocalDataControlModel(
         title: "Local records cleared",
         summaryText: formatSummary(response.deleted),
         confirmationText:
-          "The encrypted database file and database key still exist, but its canonical aggregates, check-ins, and annotations are empty.",
+          "The database file and key are still on this device, but app-owned records have been cleared.",
         isEmpty: true,
       };
     default:
@@ -187,8 +187,8 @@ function exportSummaryModel(summary: LocalDataSummary): LocalDataControlModel {
     title: isEmpty ? "Nothing to export" : "Export local records",
     summaryText: formatSummary(summary),
     confirmationText: isEmpty
-      ? "There are no canonical local aggregates, check-ins, or annotations to export."
-      : "This writes a local report, aggregate CSV files, and your private annotations. It does not include URLs, titles, page text, diagnoses, or clinical phase labels.",
+      ? "There are no records to export."
+      : "This writes a summary, CSV files, and your private notes. No URLs, titles, page text, or clinical labels are included.",
     isEmpty,
   };
 }
@@ -215,8 +215,8 @@ function summaryModel(summary: LocalDataSummary): LocalDataControlModel {
     title: isEmpty ? "No local records" : "Clear local records",
     summaryText: formatSummary(summary),
     confirmationText: isEmpty
-      ? "There are no canonical local aggregates, check-ins, or annotations to clear."
-      : "This clears canonical local aggregates, check-ins, and annotations from this device. It does not uninstall MindCanary or remove the encrypted database key.",
+      ? "There are no records to clear."
+      : "This clears app-owned records from this device. It does not uninstall mindcanary, remove the database key, or delete exports, backups, or browser extension storage.",
     isEmpty,
   };
 }

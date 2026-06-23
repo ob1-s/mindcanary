@@ -52,6 +52,13 @@ pub struct ChromeConnectorStatus {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct LocalServiceAutostartStatus {
+    pub supported: bool,
+    pub enabled: bool,
+    pub active: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct LocalRemovalReport {
     pub user_service_removed: bool,
     pub native_host_manifests_removed: Vec<String>,
@@ -73,10 +80,37 @@ pub fn ensure_packaged_daemon_service() -> Result<()> {
         return Ok(());
     }
 
-    install_daemon_service(Path::new(PACKAGED_DAEMON_PATH))?;
+    let autostart_enabled = user_service_is_enabled().unwrap_or(false);
+    install_daemon_service(Path::new(PACKAGED_DAEMON_PATH), autostart_enabled)?;
     wait_for_daemon_socket(Duration::from_secs(5))?;
     write_version_marker(&marker_path, PACKAGE_VERSION)?;
     Ok(())
+}
+
+pub fn local_service_autostart_status() -> LocalServiceAutostartStatus {
+    if current_runtime() != ChromeConnectorRuntime::Packaged
+        || validate_executable(Path::new(PACKAGED_DAEMON_PATH), "daemon").is_err()
+    {
+        return LocalServiceAutostartStatus {
+            supported: false,
+            enabled: false,
+            active: daemon_is_ready(),
+        };
+    }
+
+    LocalServiceAutostartStatus {
+        supported: true,
+        enabled: user_service_is_enabled().unwrap_or(false),
+        active: user_service_is_active().unwrap_or_else(|_| daemon_is_ready()),
+    }
+}
+
+pub fn set_local_service_autostart(enabled: bool) -> Result<LocalServiceAutostartStatus> {
+    let daemon_path = Path::new(PACKAGED_DAEMON_PATH);
+    validate_executable(daemon_path, "daemon")?;
+    import_user_service_session_environment();
+    install_daemon_service(daemon_path, enabled)?;
+    Ok(local_service_autostart_status())
 }
 
 pub fn chrome_connector_status() -> ChromeConnectorStatus {
@@ -285,7 +319,7 @@ fn development_setup_command(channel: &str) -> String {
     )
 }
 
-fn install_daemon_service(daemon_path: &Path) -> Result<()> {
+fn install_daemon_service(daemon_path: &Path, enable_login_start: bool) -> Result<()> {
     let status = daemon_service_install_command(daemon_path)?
         .status()
         .context("run packaged MindCanary daemon service installer")?;
@@ -293,6 +327,17 @@ fn install_daemon_service(daemon_path: &Path) -> Result<()> {
         status.success(),
         "packaged MindCanary daemon service installer failed"
     );
+    run_systemctl_user(&["daemon-reload"])?;
+    if enable_login_start {
+        run_systemctl_user(&["enable", USER_SERVICE_NAME])?;
+    } else {
+        let _ = Command::new("systemctl")
+            .arg("--user")
+            .arg("disable")
+            .arg(USER_SERVICE_NAME)
+            .status();
+    }
+    restart_user_service()?;
     Ok(())
 }
 
@@ -313,8 +358,7 @@ fn daemon_service_install_command(daemon_path: &Path) -> Result<Command> {
     command
         .arg("--install-user-service")
         .arg("--daemon-path")
-        .arg(daemon_path)
-        .arg("--enable-now");
+        .arg(daemon_path);
     Ok(command)
 }
 
@@ -355,17 +399,47 @@ fn stop_user_service_if_available() {
 }
 
 fn restart_user_service() -> Result<()> {
+    run_systemctl_user(&["restart", USER_SERVICE_NAME]).context("restart MindCanary user service")
+}
+
+fn run_systemctl_user(args: &[&str]) -> Result<()> {
     let status = Command::new("systemctl")
         .arg("--user")
-        .arg("restart")
-        .arg(USER_SERVICE_NAME)
+        .args(args)
         .status()
-        .context("restart MindCanary user service")?;
+        .context("run systemctl --user")?;
     anyhow::ensure!(
         status.success(),
-        "MindCanary user service restart failed with status {status}"
+        "systemctl --user {} failed with status {status}",
+        args.join(" ")
     );
     Ok(())
+}
+
+fn user_service_is_enabled() -> Result<bool> {
+    let output = Command::new("systemctl")
+        .arg("--user")
+        .arg("is-enabled")
+        .arg(USER_SERVICE_NAME)
+        .output()
+        .context("check MindCanary user service enablement")?;
+    if !output.status.success() {
+        return Ok(false);
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim() == "enabled")
+}
+
+fn user_service_is_active() -> Result<bool> {
+    let output = Command::new("systemctl")
+        .arg("--user")
+        .arg("is-active")
+        .arg(USER_SERVICE_NAME)
+        .output()
+        .context("check MindCanary user service activity")?;
+    if !output.status.success() {
+        return Ok(false);
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim() == "active")
 }
 
 fn import_user_service_session_environment() {
@@ -548,7 +622,6 @@ mod tests {
                 OsStr::new("--install-user-service"),
                 OsStr::new("--daemon-path"),
                 daemon_path.as_os_str(),
-                OsStr::new("--enable-now"),
             ]
         );
     }
@@ -713,7 +786,6 @@ mod tests {
                 OsStr::new("--install-user-service"),
                 OsStr::new("--daemon-path"),
                 daemon_path.as_os_str(),
-                OsStr::new("--enable-now"),
             ]
         );
     }

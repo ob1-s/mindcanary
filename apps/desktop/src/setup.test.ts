@@ -23,7 +23,7 @@ describe("local setup checklist", () => {
 
     expect(model.progressText).toBe("0 of 2 essentials ready");
     expect(model.steps[0]?.state).toBe("current");
-    expect(model.steps[0]?.detail).toContain("mindcanaryd");
+    expect(model.steps[0]?.detail).toContain("local service");
     expect(model.steps[1]?.state).toBe("blocked");
     expect(model.steps[2]?.state).toBe("blocked");
   });

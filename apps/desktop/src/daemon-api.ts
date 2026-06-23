@@ -24,9 +24,21 @@ export interface ChromeConnectorStatus {
   setup_command: string | null;
 }
 
+export interface LocalServiceAutostartStatus {
+  supported: boolean;
+  enabled: boolean;
+  active: boolean;
+}
+
 export const daemonApi = {
   appVersion: () => invoke<string>("app_version"),
   ensureLocalService: () => invoke<void>("ensure_local_service"),
+  localServiceAutostartStatus: () =>
+    invoke<LocalServiceAutostartStatus>("local_service_autostart_status"),
+  setLocalServiceAutostart: (enabled: boolean) =>
+    invoke<LocalServiceAutostartStatus>("set_local_service_autostart", {
+      enabled,
+    }),
   chromeConnectorStatus: () =>
     invoke<ChromeConnectorStatus>("chrome_connector_status"),
   connectChrome: () => invoke<ChromeConnectorStatus>("connect_chrome"),

@@ -53,11 +53,11 @@ export function daemonConnectionItem(
 ): ConnectionStatusItemModel {
   return {
     id: "daemon",
-    label: "Local daemon",
+    label: "Local service",
     statusLabel: ready ? "Running" : "Unavailable",
     detail: ready
-      ? "Private storage and local APIs are available."
-      : "The desktop app cannot reach the local service.",
+      ? "Your records and local APIs are available."
+      : "The app cannot reach the local service.",
     tone: ready ? "positive" : "attention",
   };
 }

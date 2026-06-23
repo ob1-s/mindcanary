@@ -105,8 +105,9 @@ describe("local data controls", () => {
     });
 
     expect(model.title).toBe("Export local records");
-    expect(model.confirmationText).toContain("your private annotations");
-    expect(model.confirmationText).toContain("does not include URLs");
+    expect(model.confirmationText).toContain("your private notes");
+    expect(model.confirmationText).toContain("No URLs");
+    expect(model.confirmationText).toContain("titles");
     expect(model.confirmationText).not.toMatch(/predict|score|warning/i);
     expect(model).toHaveProperty("confirmationToken");
   });
@@ -164,7 +165,7 @@ describe("local data controls", () => {
     expect(model.summaryText).toBe(
       "20 aggregate batches, 100 aggregate metrics, 5 check-ins, 7 context tags, 2 annotations, 3 annotation tags",
     );
-    expect(model.confirmationText).toContain("does not uninstall MindCanary");
+    expect(model.confirmationText).toContain("does not uninstall mindcanary");
     expect(model).toHaveProperty("confirmationToken");
   });
 
@@ -183,7 +184,7 @@ describe("local data controls", () => {
     });
 
     expect(model.title).toBe("Local records cleared");
-    expect(model.confirmationText).toContain("database key still exist");
+    expect(model.confirmationText).toContain("app-owned records");
     expect(model.confirmationText).not.toMatch(
       /everything|all traces|permanently gone/i,
     );

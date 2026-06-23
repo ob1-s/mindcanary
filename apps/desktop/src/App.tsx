@@ -58,7 +58,10 @@ import {
   type SignalDeletionConfirmationModel,
   type SignalCollectionControlModel,
 } from "./collection-controls";
-import { daemonApi } from "./daemon-api";
+import {
+  daemonApi,
+  type LocalServiceAutostartStatus,
+} from "./daemon-api";
 import {
   createSupportDiagnostics,
   toLocalDataControlModel,
@@ -133,6 +136,9 @@ export function App() {
   );
   const [platform, setPlatform] = useState<PlatformCapabilityModel>();
   const [collectionUnavailable, setCollectionUnavailable] = useState(false);
+  const [localServiceAutostart, setLocalServiceAutostart] =
+    useState<LocalServiceAutostartStatus>();
+  const [autostartUpdating, setAutostartUpdating] = useState(false);
   const [dataControl, setDataControl] = useState<LocalDataControlModel>();
   const [dataUnavailable, setDataUnavailable] = useState(false);
   const [clearConfirmation, setClearConfirmation] =
@@ -197,6 +203,7 @@ export function App() {
       settingsResponse,
       dataResponse,
       connectorResponse,
+      autostartResponse,
     ] = await Promise.allSettled([
       daemonApi.health(),
       daemonApi.sourceStatus(),
@@ -206,13 +213,12 @@ export function App() {
       daemonApi.collectionSettings(),
       daemonApi.localDataSummary(),
       daemonApi.chromeConnectorStatus(),
+      daemonApi.localServiceAutostartStatus(),
     ]);
 
-    setServiceState(
-      health.status === "fulfilled" && health.value.type === "health"
-        ? "ready"
-        : "unavailable",
-    );
+    const serviceReady =
+      health.status === "fulfilled" && health.value.type === "health";
+    setServiceState(serviceReady ? "ready" : "unavailable");
     if (sourceStatusResponse.status === "fulfilled") {
       const connector =
         connectorResponse.status === "fulfilled"
@@ -272,6 +278,15 @@ export function App() {
       setDataUnavailable(false);
     } else {
       setDataUnavailable(true);
+    }
+    if (autostartResponse.status === "fulfilled") {
+      setLocalServiceAutostart(autostartResponse.value);
+    } else {
+      setLocalServiceAutostart({
+        supported: false,
+        enabled: false,
+        active: serviceReady,
+      });
     }
   }
 
@@ -395,6 +410,23 @@ export function App() {
       setNotice(
         `${result.enabledCount} of ${result.attemptedCount} remaining computer activity signals enabled. Review Sources and try again.`,
       );
+    }
+  }
+
+  async function setServiceAutostart(enabled: boolean): Promise<void> {
+    setAutostartUpdating(true);
+    try {
+      const status = await daemonApi.setLocalServiceAutostart(enabled);
+      setLocalServiceAutostart(status);
+      setNotice(
+        enabled
+          ? "Local service will start when you sign in."
+          : "Local service will start when you open mindcanary.",
+      );
+    } catch {
+      setNotice("The startup setting could not be changed on this device.");
+    } finally {
+      setAutostartUpdating(false);
     }
   }
 
@@ -557,7 +589,7 @@ export function App() {
       setClearConfirmation(undefined);
       setInsights(undefined);
       setTimeline(undefined);
-      setNotice("Canonical local records cleared.");
+      setNotice("Local records cleared.");
       await refreshDashboard();
     } catch {
       setNotice("The confirmation expired. Review the records again.");
@@ -700,6 +732,7 @@ export function App() {
             browserActionDetail={chromeActionDetail}
             browserActionLabel={chromeActionLabel}
             computerActivityAvailable={computerActivityAvailable}
+            localServiceAutostart={localServiceAutostart}
             model={onboarding}
             onComplete={completeOnboarding}
             onEnableBrowserContext={async () => {
@@ -709,8 +742,8 @@ export function App() {
               await enableStarterSet();
             }}
             onEnableComputerActivity={enableOsActivitySet}
-            onRefresh={refreshDashboard}
-            refreshing={refreshing}
+            onSetLocalServiceAutostart={setServiceAutostart}
+            autostartUpdating={autostartUpdating}
           />
         ) : (
           <>
@@ -799,6 +832,11 @@ export function App() {
                   />
                 </div>
                 <aside className="side-column">
+                  <ServiceStartupPanel
+                    status={localServiceAutostart}
+                    updating={autostartUpdating}
+                    onSetAutostart={setServiceAutostart}
+                  />
                   <PlatformPanel model={platform} />
                 </aside>
               </div>
@@ -992,7 +1030,7 @@ function SectionTabs({
   ];
 
   return (
-    <nav className="section-tabs" aria-label="MindCanary sections">
+    <nav className="section-tabs" aria-label="mindcanary sections">
       {sections.map((section) => (
         <button
           aria-current={activeSection === section.id ? "page" : undefined}
@@ -1012,38 +1050,40 @@ function OnboardingFlow({
   browserActionDetail,
   browserActionLabel,
   computerActivityAvailable,
+  localServiceAutostart,
   model,
-  refreshing,
   onComplete,
   onEnableBrowserContext,
   onEnableComputerActivity,
-  onRefresh,
+  onSetLocalServiceAutostart,
+  autostartUpdating,
 }: {
   browserActionDetail: string;
   browserActionLabel: string;
   computerActivityAvailable: boolean;
+  localServiceAutostart?: LocalServiceAutostartStatus;
   model: ReturnType<typeof toOnboardingModel>;
-  refreshing: boolean;
   onComplete: (section?: AppSection) => void;
   onEnableBrowserContext: () => Promise<void>;
   onEnableComputerActivity: () => Promise<void>;
-  onRefresh: () => Promise<void>;
+  onSetLocalServiceAutostart: (enabled: boolean) => Promise<void>;
+  autostartUpdating: boolean;
 }) {
   const [step, setStep] = useState<OnboardingStep>("intro");
   const [pendingAction, setPendingAction] = useState<
-    "browser" | "computer" | undefined
+    "startup" | "browser" | "computer" | undefined
   >();
-  const stepIndex = { intro: 1, browser: 2, computer: 3, finish: 4 }[step];
+  const stepIndex = { intro: 1, browser: 2, computer: 3, startup: 4 }[step];
 
   async function runConnectorAction(
     action: () => Promise<void>,
-    nextStep: OnboardingStep,
-    pending: "browser" | "computer",
+    pending: "startup" | "browser" | "computer",
+    after: () => void,
   ): Promise<void> {
     setPendingAction(pending);
     try {
       await action();
-      setStep(nextStep);
+      after();
     } finally {
       setPendingAction(undefined);
     }
@@ -1056,7 +1096,7 @@ function OnboardingFlow({
           <span>Step {stepIndex} of 4</span>
           <div aria-hidden="true">
             {(
-              ["intro", "browser", "computer", "finish"] as OnboardingStep[]
+              ["intro", "browser", "computer", "startup"] as OnboardingStep[]
             ).map((candidate) => (
               <span data-active={candidate === step} key={candidate} />
             ))}
@@ -1066,30 +1106,27 @@ function OnboardingFlow({
         {step === "intro" && (
           <div className="onboarding-step">
             <p className="eyebrow">Welcome</p>
-            <h1 id="onboarding-title">
-              A private rhythm log, not a verdict machine.
-            </h1>
+            <h1 id="onboarding-title">Your routines, kept private.</h1>
             <p>
-              MindCanary helps you notice how your routines change over time. It
-              starts local, quiet, and optional by design.
+              <span className="brand-highlight">mindcanary</span> helps you
+              notice how your rhythms change over time. Everything stays on your
+              device unless you decide otherwise.
             </p>
             <div className="onboarding-principles">
-              <div>
+              <div className="onboarding-principles-content">
                 <strong>Local first</strong>
-                <span>No account, cloud sync, or telemetry is required.</span>
+                <span>No account, no cloud, no telemetry.</span>
               </div>
-              <div>
-                <strong>You choose the signals</strong>
+              <div className="onboarding-principles-content">
+                <strong>You pick what to track</strong>
                 <span>
-                  Check-ins work alone. Browser and computer context are
-                  optional.
+                  Check-ins work on their own. Browser and computer context are
+                  always optional.
                 </span>
               </div>
-              <div>
-                <strong>No diagnosis language</strong>
-                <span>
-                  MindCanary describes patterns and leaves meaning to you.
-                </span>
+              <div className="onboarding-principles-content">
+                <strong>Patterns, not labels</strong>
+                <span>You decide what the data means.</span>
               </div>
             </div>
             <div className="onboarding-actions">
@@ -1107,10 +1144,10 @@ function OnboardingFlow({
         {step === "browser" && (
           <div className="onboarding-step">
             <p className="eyebrow">Optional browser context</p>
-            <h1 id="onboarding-title">Add Chrome only if you want context.</h1>
+            <h1 id="onboarding-title">Want browser context?</h1>
             <p>
-              MindCanary works with check-ins alone. Chrome context adds
-              aggregate browser rhythms, not the pages you read.
+              mindcanary works with check-ins alone. Chrome adds browsing rhythm
+              summaries - never the pages you visit.
             </p>
             <div className="onboarding-choice-grid">
               <button
@@ -1119,8 +1156,8 @@ function OnboardingFlow({
                 onClick={() =>
                   void runConnectorAction(
                     onEnableBrowserContext,
-                    "computer",
                     "browser",
+                    () => setStep("computer"),
                   )
                 }
                 type="button"
@@ -1158,7 +1195,7 @@ function OnboardingFlow({
         {step === "computer" && (
           <div className="onboarding-step">
             <p className="eyebrow">Optional computer activity</p>
-            <h1 id="onboarding-title">Add active and idle time if useful.</h1>
+            <h1 id="onboarding-title">Track computer activity?</h1>
             <p>
               This records local active and idle duration totals. It does not
               store app names, window titles, document names, or content.
@@ -1172,8 +1209,8 @@ function OnboardingFlow({
                 onClick={() =>
                   void runConnectorAction(
                     onEnableComputerActivity,
-                    "finish",
                     "computer",
+                    () => setStep("startup"),
                   )
                 }
                 type="button"
@@ -1194,7 +1231,7 @@ function OnboardingFlow({
               <button
                 className="onboarding-choice"
                 disabled={pendingAction !== undefined}
-                onClick={() => setStep("finish")}
+                onClick={() => setStep("startup")}
                 type="button"
               >
                 <strong>Skip computer activity for now</strong>
@@ -1214,39 +1251,89 @@ function OnboardingFlow({
           </div>
         )}
 
-        {step === "finish" && (
+        {step === "startup" && (
           <div className="onboarding-step">
-            <p className="eyebrow">Ready</p>
-            <h1 id="onboarding-title">Use it gently for a few days.</h1>
+            <p className="eyebrow">Startup</p>
+            <h1 id="onboarding-title">Start mindcanary when you sign in?</h1>
             <p>
-              Early value is the log itself. Pattern explanations become more
-              meaningful after MindCanary has comparable local days.
+              This controls whether the local service resumes after a reboot.
+              You can change it later from Sources.
             </p>
-            <div className="onboarding-service">
-              <strong>{model.serviceText}</strong>
-              <button
-                className="secondary-button"
-                disabled={refreshing}
-                onClick={() => void onRefresh()}
-                type="button"
-              >
-                {refreshing ? "Refreshing..." : "Refresh status"}
-              </button>
+            <div className="onboarding-choice-grid">
+              {localServiceAutostart === undefined ? (
+                <button className="onboarding-choice" disabled type="button">
+                  <strong>Checking startup setting...</strong>
+                  <span>
+                    mindcanary is checking whether this build can manage login
+                    startup.
+                  </span>
+                </button>
+              ) : localServiceAutostart.supported === false ? (
+                <button
+                  className="onboarding-choice"
+                  disabled={pendingAction !== undefined || autostartUpdating}
+                  onClick={() => onComplete("today")}
+                  type="button"
+                >
+                  <strong>Continue</strong>
+                  <span>
+                    Login startup is managed by the installed Linux app. This
+                    development profile can still be tested normally.
+                  </span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="onboarding-choice"
+                    disabled={pendingAction !== undefined || autostartUpdating}
+                    onClick={() =>
+                      void runConnectorAction(
+                        () => onSetLocalServiceAutostart(true),
+                        "startup",
+                        () => onComplete("today"),
+                      )
+                    }
+                    type="button"
+                  >
+                    <strong>
+                      {pendingAction === "startup" || autostartUpdating
+                        ? "Saving..."
+                        : "Start at login"}
+                    </strong>
+                    <span>
+                      Best if you want optional local sources to keep working
+                      after a reboot.
+                    </span>
+                  </button>
+                  <button
+                    className="onboarding-choice"
+                    disabled={pendingAction !== undefined || autostartUpdating}
+                    onClick={() =>
+                      void runConnectorAction(
+                        () => onSetLocalServiceAutostart(false),
+                        "startup",
+                        () => onComplete("today"),
+                      )
+                    }
+                    type="button"
+                  >
+                    <strong>Only when I open mindcanary</strong>
+                    <span>
+                      More manual, but nothing starts at login unless you change
+                      it later.
+                    </span>
+                  </button>
+                </>
+              )}
             </div>
             <div className="onboarding-actions">
               <button
                 className="secondary-button"
+                disabled={pendingAction !== undefined || autostartUpdating}
                 onClick={() => setStep("computer")}
                 type="button"
               >
                 Back
-              </button>
-              <button
-                className="primary-button"
-                onClick={() => onComplete("today")}
-                type="button"
-              >
-                Open MindCanary
               </button>
             </div>
           </div>
@@ -1272,7 +1359,7 @@ function ConnectionsPanel({
       compact
       eyebrow="Connections"
       title="Local sources"
-      description="Shows whether optional local sources have delivered data recently."
+      description="Shows which optional sources are connected on this device."
     >
       {model === undefined && <PanelLoading text="Checking local sources..." />}
       {model?.state === "unavailable" && !serviceReady && (
@@ -1350,13 +1437,77 @@ function ConnectionRow({
   );
 }
 
+function ServiceStartupPanel({
+  status,
+  updating,
+  onSetAutostart,
+}: {
+  status?: LocalServiceAutostartStatus;
+  updating: boolean;
+  onSetAutostart: (enabled: boolean) => Promise<void>;
+}) {
+  return (
+    <Panel
+      compact
+      eyebrow="Startup"
+      title="Local service"
+      description="Controls whether the private local service starts when you sign in."
+    >
+      {status === undefined && (
+        <PanelLoading text="Checking startup setting..." />
+      )}
+      {status?.supported === false && (
+        <EmptyState
+          title="Packaged app only"
+          body="Login startup is managed by the installed Linux app. Development profiles can still use whichever local service you start for testing."
+        />
+      )}
+      {status?.supported === true && (
+        <div className="control-list">
+          <div className="control-row">
+            <div className="control-copy">
+              <strong>Start at login</strong>
+              <span>
+                Optional. Keep it on if you want local sources to resume after
+                a reboot.
+              </span>
+            </div>
+            <div className="control-actions">
+              <span className="connection-state" data-tone="neutral">
+                {status.enabled ? "On" : "Off"}
+              </span>
+              <button
+                role="switch"
+                aria-checked={status.enabled}
+                aria-label="Start local service at login"
+                className="switch"
+                data-enabled={status.enabled}
+                disabled={updating}
+                onClick={() => void onSetAutostart(!status.enabled)}
+                title={
+                  status.enabled
+                    ? "Disable login startup"
+                    : "Enable login startup"
+                }
+                type="button"
+              >
+                <span />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function PlatformPanel({ model }: { model?: PlatformCapabilityModel }) {
   return (
     <Panel
       compact
       eyebrow="Device support"
-      title="Local OS signals"
-      description="Shows what this machine can support before any OS activity collection is added."
+      title="Device capabilities"
+      description="Shows which activity signals this device supports."
     >
       {model === undefined && (
         <PanelLoading text="Checking device support..." />
@@ -1404,7 +1555,7 @@ function TimelinePanel({
     <Panel
       eyebrow="Daily history"
       title="Local rhythms"
-      description="A descriptive calendar view of what was recorded. Missing days remain visible and are not treated as zero."
+      description="A calendar view of what was recorded. Days without data stay visible and are never counted as zero."
     >
       {model === undefined && <PanelLoading text="Loading local history..." />}
       {model?.state === "unavailable" && (
@@ -1704,7 +1855,7 @@ function Header({
         <span className="brand-mark" aria-hidden="true">
           <img alt="" src="/mindcanary-mark.svg" />
         </span>
-        <span>MindCanary</span>
+        <span>mindcanary</span>
       </div>
       {showNavigation && (
         <nav className="topbar-nav" aria-label="Quick sections">
@@ -1867,7 +2018,7 @@ function CheckInPanel({
       id="check-in-panel"
       eyebrow="Optional check-in"
       title="How has today felt?"
-      description="Skip anything you do not want to answer. Each submission is kept separately; History summarizes the day."
+      description="Skip anything you don't want to answer. Each check-in is saved separately."
     >
       <form className="check-in-form" onSubmit={save}>
         <div className="field-grid field-grid-core">
@@ -2053,8 +2204,8 @@ function InsightsPanel({ model }: { model?: DailyRhythmDashboardModel }) {
   return (
     <Panel
       eyebrow="Personal baseline"
-      title="Window changes"
-      description="Descriptions compare sustained multi-day windows with your own prior days. They are not diagnoses or predictions."
+      title="Rhythm changes"
+      description="Compares recent multi-day windows with your own earlier history. Descriptive only; you decide what it means."
     >
       {model === undefined && <PanelLoading text="Loading local history..." />}
       {model?.state === "unavailable" && (
@@ -2116,7 +2267,7 @@ function LatestLocalRecordPanel({
     <Panel
       eyebrow="Private logbook"
       title="Latest local record"
-      description="Useful from the first day, before any comparison is possible."
+      description="Your most recent recorded day."
     >
       {model.state === "unavailable" && (
         <EmptyState
@@ -2164,7 +2315,7 @@ function ReadinessDetails({ items }: { items: ReadinessItemModel[] }) {
 
   return (
     <details className="readiness-details">
-      <summary>How each dimension was handled</summary>
+      <summary>Readiness by signal</summary>
       <div className="readiness-list">
         {items.map((item) => (
           <div
@@ -2242,12 +2393,12 @@ function CollectionPanel({
         compact
         eyebrow="Collection"
         title="Computer activity signals"
-        description="Optional local duration and lifecycle event totals. No app names, window titles, or document names."
+        description="Optional active and idle time. No app names, window titles, or content."
       >
         {unavailable ? (
           <EmptyState
             title="Settings unavailable"
-            body="Start the local MindCanary service to review or change computer activity collection."
+            body="Start the local service to manage computer activity settings."
           />
         ) : osControls.length === 0 ? (
           <PanelLoading text="Loading computer activity settings..." />
@@ -2290,12 +2441,12 @@ function CollectionPanel({
         compact
         eyebrow="Collection"
         title="Browser signals"
-        description="Each aggregate is controlled separately. No URLs, titles, or page text."
+        description="Each signal is controlled individually. No URLs, titles, or page text."
       >
         {unavailable ? (
           <EmptyState
             title="Settings unavailable"
-            body="Start the local MindCanary service to review or change browser collection."
+            body="Start the local service to manage browser settings."
           />
         ) : browserControls.length === 0 ? (
           <PanelLoading text="Loading signal settings..." />
@@ -2423,7 +2574,7 @@ function DeleteSignalRecordsDialog({
         className="dialog"
         role="dialog"
       >
-        <p className="eyebrow">Delete one signal</p>
+        <p className="eyebrow">Delete signal history</p>
         <h2 id="delete-signal-dialog-title">Delete {model.label} history?</h2>
         <p className="dialog-summary">{model.summaryText}</p>
         <p>{model.confirmationText}</p>
@@ -2476,9 +2627,7 @@ function DataPanel({
       compact
       eyebrow="Local data"
       title={model?.title ?? "Stored records"}
-      description={
-        model?.summaryText ?? "Reading the encrypted local record counts..."
-      }
+      description={model?.summaryText ?? "Reading your local record counts..."}
     >
       {unavailable ? (
         <EmptyState
@@ -2489,7 +2638,7 @@ function DataPanel({
         <>
           <p className="small-copy">
             {model?.confirmationText ??
-              "The dashboard never opens the database directly."}
+              "Records are managed through the local service."}
           </p>
           <div className="button-row">
             <button
@@ -2518,8 +2667,8 @@ function DataPanel({
             </button>
           </div>
           <p className="small-copy">
-            Backups use a separate recovery secret that MindCanary does not
-            keep. Readable CSV export remains a separate action.
+            Backups use a separate recovery secret that mindcanary does not
+            store. CSV export is a separate action.
           </p>
         </>
       )}
@@ -2555,7 +2704,7 @@ function SupportPanel({
       compact
       eyebrow="Support"
       title={
-        appVersion === undefined ? "MindCanary" : `MindCanary ${appVersion}`
+        appVersion === undefined ? "mindcanary" : `mindcanary ${appVersion}`
       }
       description="Preview non-sensitive system status for a support request."
     >
@@ -2601,13 +2750,10 @@ function SupportDiagnosticsDialog({
     <Dialog
       eyebrow="Support information"
       onClose={onClose}
-      title={`MindCanary ${model.appVersion}`}
+      title={`mindcanary ${model.appVersion}`}
       wide
     >
-      <p>
-        Review this text before sharing it. MindCanary does not send it
-        automatically.
-      </p>
+      <p>Review this text before sharing it. Nothing is sent automatically.</p>
       <textarea
         aria-label="Support information preview"
         className="support-diagnostics-preview"
@@ -2922,8 +3068,8 @@ function BackupCreatedDialog({
         <h2 id="backup-created-title">Store the recovery secret separately</h2>
         <p className="dialog-summary">{model.summaryText}</p>
         <p>
-          MindCanary does not retain this secret and cannot recover it. The
-          backup file is unusable without it.
+          This secret is shown once and not stored anywhere. The backup file is
+          unusable without it.
         </p>
         <label className="field-label" htmlFor="backup-created-path">
           Backup file
@@ -3158,12 +3304,12 @@ function ClearRecordsDialog({
         role="dialog"
       >
         <p className="eyebrow">Confirm local clearing</p>
-        <h2 id="clear-dialog-title">Clear these canonical records?</h2>
+        <h2 id="clear-dialog-title">Clear these local records?</h2>
         <p className="dialog-summary">{model.summaryText}</p>
         <p>{model.confirmationText}</p>
         <p className="small-copy">
-          Confirmation expires at {model.expiresAt}. The encrypted database file
-          and its key are not removed by this operation.
+          Confirmation expires at {model.expiresAt}. The database file and key
+          are not removed.
         </p>
         <div className="dialog-actions">
           <button
