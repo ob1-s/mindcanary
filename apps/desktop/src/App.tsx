@@ -1545,8 +1545,8 @@ function ServiceStartupPanel({
             <div className="control-copy">
               <strong>Start at login</strong>
               <span>
-                Optional. Keep it on if you want local sources to resume after
-                a reboot.
+                Optional. Keep it on if you want local sources to resume after a
+                reboot.
               </span>
             </div>
             <div className="control-actions">
