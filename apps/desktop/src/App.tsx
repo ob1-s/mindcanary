@@ -850,7 +850,6 @@ export function App() {
 
             {activeSection === "history" && (
               <div className="single-column">
-                <InsightsPanel model={insights} />
                 <TimelinePanel
                   model={timeline}
                   onAddAnnotation={(date) =>
@@ -866,6 +865,7 @@ export function App() {
                     void prepareCheckInDeletion(localDate)
                   }
                 />
+                <InsightsPanel model={insights} />
               </div>
             )}
 
@@ -2309,8 +2309,8 @@ function InsightsPanel({ model }: { model?: DailyRhythmDashboardModel }) {
   return (
     <Panel
       eyebrow="Personal baseline"
-      title="Rhythm changes"
-      description="Compares recent multi-day windows with your own earlier history. Descriptive only; you decide what it means."
+      title="Current rhythm changes"
+      description="Shows only the latest complete multi-day window compared with your own prior days. Descriptive only; you decide what it means."
     >
       {model === undefined && <PanelLoading text="Loading local history..." />}
       {model?.state === "unavailable" && (

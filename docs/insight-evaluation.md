@@ -20,6 +20,10 @@ never produce one. It is not tuned to maximize the number of cards. It should re
 data is sparse, zero-centered, unstable, missing, or moved for only one isolated
 day.
 
+The app surfaces only the latest complete comparison window per dimension.
+Older changed windows remain visible in the raw daily history, not as current
+rhythm-change cards.
+
 ## Synthetic False-Nudge Budget
 
 The current local synthetic budget is zero false nudges across these quiet

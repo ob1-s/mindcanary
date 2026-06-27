@@ -289,15 +289,18 @@ pub fn analyze_insights(
         };
     }
 
-    let mut insights = Vec::new();
     let first_window_end = config.min_baseline_days + config.min_sustained_days - 1;
-    for index in first_window_end..snapshots.len() {
-        for metric in METRICS {
-            if let Some(insight) = insight_for_metric(snapshots, index, metric, config) {
-                insights.push(insight);
-            }
-        }
-    }
+    let insights = snapshots
+        .len()
+        .checked_sub(1)
+        .filter(|index| *index >= first_window_end)
+        .map(|index| {
+            METRICS
+                .into_iter()
+                .filter_map(|metric| insight_for_metric(snapshots, index, metric, config))
+                .collect()
+        })
+        .unwrap_or_default();
 
     let readiness = latest_readiness(snapshots, config);
 
@@ -785,6 +788,31 @@ mod tests {
     }
 
     #[test]
+    fn only_describes_the_latest_complete_window() {
+        let snapshots = vec![
+            snapshot("2026-01-05", Some(10.0), None, None),
+            snapshot("2026-01-06", Some(10.0), None, None),
+            snapshot("2026-01-07", Some(10.0), None, None),
+            snapshot("2026-01-08", Some(30.0), None, None),
+            snapshot("2026-01-09", Some(30.0), None, None),
+            snapshot("2026-01-10", Some(10.0), None, None),
+        ];
+
+        let analysis = analyze_insights(&snapshots, BaselineConfig::default());
+
+        assert!(
+            analysis.insights.is_empty(),
+            "old changed windows should not remain visible as current changes"
+        );
+        let browser_tabs = analysis
+            .readiness
+            .iter()
+            .find(|readiness| readiness.dimension == InsightDimension::BrowserTabs)
+            .unwrap();
+        assert_eq!(browser_tabs.status, ReadinessStatus::WithinBaseline);
+    }
+
+    #[test]
     fn does_not_describe_an_isolated_one_day_spike() {
         let snapshots = vec![
             snapshot("2026-01-05", Some(10.0), None, None),
@@ -865,7 +893,6 @@ mod tests {
             snapshot("2026-01-07", Some(10.0), None, None),
             snapshot("2026-01-10", Some(60.0), None, None),
             snapshot("2026-01-11", Some(70.0), None, None),
-            snapshot("2026-01-12", Some(20.0), None, None),
         ];
 
         let insights = generate_insights(&snapshots, config);
@@ -1022,7 +1049,6 @@ mod tests {
             snapshot("2026-01-07", Some(10.0), None, None),
             snapshot("2026-01-10", Some(60.0), None, None),
             snapshot("2026-01-11", Some(70.0), None, None),
-            snapshot("2026-01-12", Some(10.5), None, None),
         ];
         let schedule_analysis = analyze_insights(&schedule_shift, LAUNCH_BASELINE_CONFIG);
         assert_eq!(schedule_analysis.insights.len(), 1);
@@ -1126,6 +1152,8 @@ mod tests {
             | ProtocolRequest::GetSourceStatus { .. }
             | ProtocolRequest::GetDailyRhythmInsights { .. }
             | ProtocolRequest::GetDailyTimeline { .. }
+            | ProtocolRequest::PrepareDeleteLatestCheckIn { .. }
+            | ProtocolRequest::DeleteLatestCheckIn { .. }
             | ProtocolRequest::GetCollectionSettings { .. }
             | ProtocolRequest::GetPlatformCapabilities { .. }
             | ProtocolRequest::SetSignalCollection { .. }

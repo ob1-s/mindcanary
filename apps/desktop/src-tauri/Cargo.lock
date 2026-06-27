@@ -1854,7 +1854,7 @@ checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
 name = "mindcanary-client"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -1867,7 +1867,7 @@ dependencies = [
 
 [[package]]
 name = "mindcanary-desktop"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "mindcanary-client",
@@ -1881,7 +1881,7 @@ dependencies = [
 
 [[package]]
 name = "mindcanary-protocol"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "chrono",
  "chrono-tz",

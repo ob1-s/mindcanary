@@ -26,11 +26,23 @@ app, productivity game, social network, or clinical control panel.
 - additional desktop operating systems;
 - Firefox validation;
 - narrow local integrations selected through user research;
+- retroactive check-ins and specific check-in edit/delete controls;
 - user-selected schedule-aware baseline groupings; and
 - improved user-controlled exports for professional review.
 
 Candidates are not commitments. New connectors must justify their permission
 cost, reliability burden, and privacy impact.
+
+## Check-In Management Backlog
+
+- Allow choosing the check-in date/time before saving, including retroactive
+  check-ins.
+- Show individual check-ins in History, not only daily summaries.
+- Allow editing or deleting a specific check-in, not only the latest check-in
+  for a day.
+- Preserve daily summaries while making multiple same-day check-ins legible.
+- Revisit sleep anchoring; sleep may belong to the last sleep period rather
+  than the current calendar day.
 
 ## Out Of Scope
 

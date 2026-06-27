@@ -1371,14 +1371,12 @@ fn daily_rhythm_insights(
     let limit = usize::from(limit.unwrap_or(DEFAULT_DAILY_RHYTHM_INSIGHT_LIMIT));
     let insight_count_before_limit = analysis.insights.len();
     let insights_truncated = insight_count_before_limit > limit;
-    let mut insights = analysis
+    let insights = analysis
         .insights
         .into_iter()
-        .rev()
         .take(limit)
         .map(protocol_insight)
         .collect::<Vec<_>>();
-    insights.reverse();
     let readiness = analysis.readiness.iter().map(protocol_readiness).collect();
 
     Ok(ProtocolResponse::DailyRhythmInsights {
@@ -2738,8 +2736,8 @@ mod tests {
         );
         assert_neutral_language(&insights);
 
-        let latest = insights
-            .last()
+        let first_current = insights
+            .first()
             .expect("synthetic history should emit insights");
         let limited = state.handle_request(
             ProtocolRequest::GetDailyRhythmInsights {
@@ -2755,8 +2753,8 @@ mod tests {
             panic!("expected limited daily rhythm insights response");
         };
         assert_eq!(limited.len(), 1);
-        assert_eq!(limited[0].local_date, latest.local_date);
-        assert_eq!(limited[0].dimension, latest.dimension);
+        assert_eq!(limited[0].local_date, first_current.local_date);
+        assert_eq!(limited[0].dimension, first_current.dimension);
     }
 
     #[test]
